@@ -1269,7 +1269,7 @@ codeunit 68916 "Mermaid Gantt Chart"
         Template := MText.TrimWs(GDateFormat);
 
         if ((Template = 'x') or (Template = 'X')) and IsAllDigits(Str) then begin
-            Parsed := DigitsTime(Str);
+            Parsed := DigitsTime(Str, Template = 'X');
             if not IsValidT(Parsed) then
                 MText.Fail('Invalid date:' + Str);
             exit(Parsed);
@@ -1372,7 +1372,7 @@ codeunit 68916 "Mermaid Gantt Chart"
         if not ((DurUnit = 'M') or (DurUnit = 'd') or (DurUnit = 'h') or (DurUnit = 'm') or (DurUnit = 's') or
                 (DurUnit = 'w') or (DurUnit = 'y') or (DurUnit = 'ms')) then
             exit(false);
-        if NumEnd > 25 then
+        if NumEnd > 19 then
             Value := 1000000000000000000.0
         else
             if not Evaluate(Value, MText.Substr(Str, 1, NumEnd), 9) then
@@ -1432,7 +1432,7 @@ codeunit 68916 "Mermaid Gantt Chart"
     end;
 
     /// <summary>new Date(Number(digits)).</summary>
-    local procedure DigitsTime(Digits: Text): BigInteger
+    local procedure DigitsTime(Digits: Text; Seconds: Boolean): BigInteger
     var
         Value: Decimal;
     begin
@@ -1442,6 +1442,8 @@ codeunit 68916 "Mermaid Gantt Chart"
             exit(NaNT());
         if not Evaluate(Value, Digits, 9) then
             exit(NaNT());
+        if Seconds then
+            Value := Value * 1000;
         exit(ClipT(Value));
     end;
 
@@ -2787,7 +2789,8 @@ codeunit 68916 "Mermaid Gantt Chart"
         for I := 0 to Len - 1 do begin
             if not MText.IsDigit(MText.CharAt(Str, P + I)) then
                 exit(false);
-            Value := Value * 10 + MText.CharAt(Str, P + I) - 48;
+            if Value < 100000000 then
+                Value := Value * 10 + MText.CharAt(Str, P + I) - 48;
         end;
         exit(true);
     end;
@@ -3135,7 +3138,7 @@ codeunit 68916 "Mermaid Gantt Chart"
             exit(NaNT());
         T := MakeT(Y, Mo - 1, D, Hour, Minute, Second, Milli);
         if HasTz then
-            T := AddMsT(T, -TzMinutes * 60000);
+            T := AddMsT(T, -TzMinutes * 60000.0);
         exit(T);
     end;
 

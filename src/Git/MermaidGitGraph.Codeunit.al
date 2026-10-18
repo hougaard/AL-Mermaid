@@ -839,7 +839,8 @@ codeunit 68917 "Mermaid Git Graph"
         AddStatement(2, ParseName());
         Last := StKind.Count();
         if Accept(10) then begin
-            Evaluate(Value, Expect(24), 9);
+            if not Evaluate(Value, Expect(24), 9) then
+                Value := 1000000000000000000.0;
             StOrder.Set(Last, Value);
         end;
         EndOfLine();

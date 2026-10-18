@@ -1760,7 +1760,7 @@ codeunit 68914 "Mermaid State Diagram"
         foreach S in DocItems(0) do
             case SKind.Get(S) of
                 'state':
-                    EnsureState(MText.TrimWs(SId.Get(S)));
+                    AddRelationState(S);
                 'relation':
                     begin
                         AddRelationState(SRel1.Get(S));
