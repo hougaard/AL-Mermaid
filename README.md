@@ -52,7 +52,8 @@ Search for **Mermaid Playground** in Business Central.
 1. Pick a diagram in **Load sample**, or choose **Next Sample** to step through one sample of every supported type.
 2. Edit the text, or paste your own Mermaid. The diagram renders when you leave the field, or when you choose **Render**.
 3. Use the viewer toolbar to zoom, show the diagram at actual size, or switch to the dark theme.
-4. Choose **Download SVG** to save the diagram, or **Show/Hide SVG Source** to see the markup.
+4. Click an element of the diagram. **Last click** in the **Clicks** group shows what the click event reported.
+5. Choose **Download SVG** to save the diagram, or **Show/Hide SVG Source** to see the markup.
 
 If the text cannot be drawn, **Status** shows the error, which for syntax errors includes the line and a pointer to the column. The AL call stack follows the error, so a bug in the renderer can be traced to its line.
 
@@ -137,12 +138,73 @@ usercontrol(Diagram; "Mermaid SVG Viewer")
 }
 ```
 
-The viewer has three procedures:
+The viewer has three display procedures, plus the click settings described in the next section:
 - **`ShowSvg(Svg)`** draws a diagram. The viewer reads the SVG as XML and removes scripts, foreign content and event handler attributes before showing it.
 - **`ShowError(Message)`** shows an error message in place of the drawing.
 - **`ShowPlaceholder(Message)`** shows a hint when there is nothing to draw.
 
 Wait for the `ControlReady` event before calling any of them.
+
+## Interactive diagrams: handling clicks in AL
+
+The viewer raises an AL event when the user clicks an element of the diagram:
+
+```al
+trigger ElementClicked(Kind: Text; Id: Text; Callback: Text; Arguments: Text; Href: Text; Classes: Text)
+```
+
+| Parameter | Contents |
+|---|---|
+| `Kind` | What was clicked: `node`, `edge`, `edge-label`, `cluster`, `actor`, `message`, `note`, `class`, `state`, `entity`, `task`, `milestone`, `slice`, `commit`, `branch`, `period` and so on. |
+| `Id` | The element's id. For a flowchart node it is the node id from the Mermaid text, so `C10000[Adatum]` reports `C10000`. |
+| `Callback`, `Arguments` | The callback from a Mermaid click statement, such as `click C10000 call openCustomer("10000")`. Both are empty when there is none. |
+| `Href` | The link target, when the element is a link (`click A href "..."`). |
+| `Classes` | The element's classes, including those the diagram assigned with `:::` or `class` statements. |
+
+Callbacks are never run as script. The viewer only reads the name and the argument text and passes them to AL, so diagram text can't run code in the browser.
+
+Two viewer procedures control the behaviour:
+
+- **`SetClickMode(Mode)`:** `'all'` (the default) raises the event for every element with an id. `'clickable'` raises it only for elements that a `click` statement makes clickable. `'none'` turns clicks off.
+- **`SetLinkHandling(HandleInAL)`:** when true, clicking a link only raises the event, and AL decides what to do. When false (the default), the link also opens in a new browser tab.
+
+Clickable elements get a pointer cursor and a soft highlight in the accent colour on hover.
+
+### Example: open records from a generated diagram
+
+Generate the Mermaid text from your data with record keys as node ids, then open the record that was clicked:
+
+```al
+usercontrol(Diagram; "Mermaid SVG Viewer")
+{
+    ApplicationArea = All;
+
+    trigger ControlReady()
+    begin
+        CurrPage.Diagram.SetClickMode('clickable');
+        CurrPage.Diagram.ShowSvg(MermaidSvg.Render(BuildCustomerDiagram()));
+    end;
+
+    trigger ElementClicked(Kind: Text; Id: Text; Callback: Text; Arguments: Text; Href: Text; Classes: Text)
+    var
+        Customer: Record Customer;
+    begin
+        case Callback of
+            'openCustomer':
+                if Customer.Get(DelChr(Arguments, '<>', '"')) then
+                    Page.Run(Page::"Customer Card", Customer);
+        end;
+    end;
+}
+```
+
+Click statements with callbacks are kept for flowcharts, class diagrams and gantt charts. For the other types, use `SetClickMode('all')` and act on `Kind` and `Id`.
+
+### Try it in the playground
+
+The **Clicks** group on the Mermaid Playground has **Click events** (all elements, clickable elements only, or off) and **Handle links in AL**. **Last click** shows what each click reported. The flowchart-with-subgraphs, class and gantt samples include click statements.
+
+For example, load **Flowchart with subgraphs** and click the **Paid** node. **Last click** shows `node "paid"` and `Callback: openInvoice("103001")`. Clicking **Customer order** reports its link to the Business Central documentation.
 
 Other ways to use the SVG:
 - **Image:** save it in a `Blob` or `Media` field, or embed it as a data URI: `data:image/svg+xml;utf8,` followed by the URL-encoded SVG.
@@ -198,13 +260,13 @@ Charts use `--pele-series-1` to `--pele-series-8`. The viewer's **Theme** button
 - **No icons or images:** `fa:` icons, `icon:` and `img:` shapes are not drawn.
 - **No narrowing to fit:** pele can redraw a diagram narrower, for example turning a left-to-right flowchart top to bottom, when the container is small. This port always draws the normal layout and lets `max-width:100%` scale it down.
 - **Simpler edge routing:** flowchart, class, state and ER edges are routed as plain curves rather than pele's tracks and levels.
-- **Click callbacks:** links in `click` statements work, but JavaScript callbacks only mark a node as clickable.
+- **Click callbacks:** callbacks are never run as JavaScript. They are passed to AL through the viewer's `ElementClicked` event instead, for flowcharts, class diagrams and gantt charts.
 - **Approximate text widths:** labels are measured with a built-in Arial width table, as pele does on a server, so a very different font can make labels fit slightly loosely or tightly.
 - **Gantt dates:** dates that don't match `dateFormat` are parsed only approximately, as a browser's lenient date parser would.
 
 ## Tests
 
-Codeunit **"Mermaid SVG Tests"** (68911) has 29 tests covering every supported type, syntax errors and escaping. Run them from the AL Test Tool. They need no test libraries. Several tests compare exact output from pele, so a failure there points to a difference between this port and pele.
+Codeunit **"Mermaid SVG Tests"** (68911) has 32 tests covering every supported type, click callbacks, syntax errors and escaping. Run them from the AL Test Tool. They need no test libraries. Several tests compare exact output from pele, so a failure there points to a difference between this port and pele.
 
 ## Project structure
 

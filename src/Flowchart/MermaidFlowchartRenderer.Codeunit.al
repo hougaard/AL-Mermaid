@@ -347,8 +347,8 @@ codeunit 68907 "Mermaid Flowchart Renderer"
                         Target := ' target="' + MText.Esc(TempNode."Link Target") + '"';
                     Body := '<a href="' + MText.Esc(TempNode.Link) + '" rel="noopener"' + Target + '>' + Body + '</a>';
                 end;
-                Out.Append('<g class="pele-node pele-shape-' + VShape.Get(I) + NodeClasses(I) + '" data-id="' + MText.EscText(TempNode.Id) +
-                           '" transform="translate(' + Builder.P(Layout.NodeX(I), Layout.NodeY(I)) + ')">' + Body + '</g>');
+                Out.Append('<g class="pele-node pele-shape-' + VShape.Get(I) + NodeClasses(I) + '" data-id="' + MText.EscText(TempNode.Id) + '"' +
+                           Builder.CallbackAttrs(TempNode.Callback, TempNode."Callback Args") + ' transform="translate(' + Builder.P(Layout.NodeX(I), Layout.NodeY(I)) + ')">' + Body + '</g>');
             end;
         exit(Out.ToText());
     end;

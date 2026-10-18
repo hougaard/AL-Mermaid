@@ -803,6 +803,22 @@ codeunit 68904 "Mermaid SVG Builder"
              Lbl.ToSvg(X, Y, Attrs) + '</g>');
     end;
 
+    /// <summary>
+    /// The attributes that carry a Mermaid click callback (click X call name(args)) to the viewer, which passes
+    /// them to AL in its ElementClicked event. Callbacks are never run as script. Empty when there is no callback.
+    /// </summary>
+    procedure CallbackAttrs(CallbackName: Text; CallbackArgs: Text): Text
+    var
+        Result: Text;
+    begin
+        if CallbackName = '' then
+            exit('');
+        Result := ' data-callback="' + MText.EscText(CallbackName) + '"';
+        if CallbackArgs <> '' then
+            Result += ' data-args="' + MText.EscText(CallbackArgs) + '"';
+        exit(Result);
+    end;
+
     /// <summary>The diagram title, bold and centred.</summary>
     procedure TitleSvg(var Lbl: Codeunit "Mermaid Label"; Cx: Decimal; Cy: Decimal): Text
     begin

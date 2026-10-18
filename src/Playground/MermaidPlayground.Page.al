@@ -72,8 +72,51 @@ page 68900 "Mermaid Playground"
                     trigger ControlReady()
                     begin
                         ViewerReady := true;
+                        ApplyClickSettings();
                         RenderDiagram();
                     end;
+
+                    trigger ElementClicked(Kind: Text; Id: Text; Callback: Text; Arguments: Text; Href: Text; Classes: Text)
+                    begin
+                        LastClickText := DescribeClick(Kind, Id, Callback, Arguments, Href);
+                        CurrPage.Update(false);
+                    end;
+                }
+            }
+            group(ClicksGroup)
+            {
+                Caption = 'Clicks';
+
+                field(ClickModeField; ClickMode)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Click events';
+                    OptionCaption = 'All elements,Clickable elements only,Off';
+                    ToolTip = 'Specifies which elements of the diagram raise a click event: every element with an id, only the elements a click statement makes clickable, or none.';
+
+                    trigger OnValidate()
+                    begin
+                        ApplyClickSettings();
+                    end;
+                }
+                field(LinksInALField; LinksInAL)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Handle links in AL';
+                    ToolTip = 'Specifies whether a link in the diagram (click A href "...") only raises the click event, instead of also opening in a new browser tab.';
+
+                    trigger OnValidate()
+                    begin
+                        ApplyClickSettings();
+                    end;
+                }
+                field(LastClickField; LastClickText)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Last click';
+                    Editable = false;
+                    MultiLine = true;
+                    ToolTip = 'Specifies what the ElementClicked event reported for the last element you clicked in the preview.';
                 }
             }
             group(SvgGroup)
@@ -204,10 +247,16 @@ page 68900 "Mermaid Playground"
         StatusText: Text;
         StatusStyle: Text;
         CallStackText: Text;
+        LastClickText: Text;
+        ClickMode: Option All,Clickable,None;
+        LinksInAL: Boolean;
         ViewerReady: Boolean;
         ShowSvgSource: Boolean;
         EmptyMsg: Label 'Type or paste Mermaid text above.';
         CallStackLbl: Label 'AL call stack:';
+        ClickedMsg: Label '%1 "%2"', Comment = '%1 = the kind of element, such as node, %2 = its id';
+        CallbackMsg: Label 'Callback: %1(%2)', Comment = '%1 = the callback name, %2 = its arguments';
+        LinkMsg: Label 'Link: %1', Comment = '%1 = the link target';
         RenderedMsg: Label 'Rendered %1 characters of SVG.', Comment = '%1 = the length of the SVG';
         NothingToDownloadErr: Label 'There is no SVG to download. Render a diagram first.';
         DownloadTitleTxt: Label 'Download SVG';
@@ -269,6 +318,37 @@ page 68900 "Mermaid Playground"
         TempBlob.CreateInStream(InStr, TextEncoding::UTF8);
         FileName := FileNameTxt;
         DownloadFromStream(InStr, DownloadTitleTxt, '', FileFilterTxt, FileName);
+    end;
+
+    local procedure ApplyClickSettings()
+    begin
+        if not ViewerReady then
+            exit;
+        case ClickMode of
+            ClickMode::All:
+                CurrPage.Viewer.SetClickMode('all');
+            ClickMode::Clickable:
+                CurrPage.Viewer.SetClickMode('clickable');
+            ClickMode::None:
+                CurrPage.Viewer.SetClickMode('none');
+        end;
+        CurrPage.Viewer.SetLinkHandling(LinksInAL);
+    end;
+
+    /// <summary>
+    /// What a click reported. In your own page, this is where you would act on it, for example open the record
+    /// whose key is the node id, or run the procedure named by the callback with its arguments.
+    /// </summary>
+    local procedure DescribeClick(Kind: Text; Id: Text; Callback: Text; Arguments: Text; Href: Text): Text
+    var
+        Result: Text;
+    begin
+        Result := StrSubstNo(ClickedMsg, Kind, Id);
+        if Callback <> '' then
+            Result += LineBreak() + StrSubstNo(CallbackMsg, Callback, Arguments);
+        if Href <> '' then
+            Result += LineBreak() + StrSubstNo(LinkMsg, Href);
+        exit(Result);
     end;
 
     local procedure LineBreak(): Text
@@ -359,6 +439,9 @@ page 68900 "Mermaid Playground"
         Parts.Add('    classDef done fill:#d4f4dd,stroke:#2e7d32');
         Parts.Add('    class paid done');
         Parts.Add('    style start stroke-width:2px');
+        Parts.Add('    click paid call openInvoice("103001") "Open the posted invoice"');
+        Parts.Add('    click po call openPurchaseOrder("106001")');
+        Parts.Add('    click start href "https://learn.microsoft.com/dynamics365/business-central/" "Business Central documentation"');
         exit(Lines(Parts));
     end;
 
@@ -430,6 +513,7 @@ page 68900 "Mermaid Playground"
         Parts.Add('    SalesHeader *-- "1..*" SalesLine : contains');
         Parts.Add('    Posting <|.. SalesHeader');
         Parts.Add('    note for Customer "Master data"');
+        Parts.Add('    click Customer call openCustomer("10000") "Open the customer card"');
         exit(Lines(Parts));
     end;
 
@@ -523,6 +607,7 @@ page 68900 "Mermaid Playground"
         Parts.Add('        Testing           :test, after be, 5d');
         Parts.Add('    section Release');
         Parts.Add('        Go-live           :milestone, golive, after test, 0d');
+        Parts.Add('    click be call openJob("JOB-0001")');
         exit(Lines(Parts));
     end;
 

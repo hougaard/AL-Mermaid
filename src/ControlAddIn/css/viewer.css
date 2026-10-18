@@ -82,6 +82,23 @@ body,
   font-family: inherit;
 }
 
+/* Clickable elements: a pointer and a soft glow in the accent colour on hover. */
+.mv-click-all .mv-stage svg [data-id],
+.mv-click-clickable .mv-stage svg .clickable,
+.mv-click-clickable .mv-stage svg .pele-clickable,
+.mv-click-clickable .mv-stage svg [data-callback],
+.mv-click-clickable .mv-stage svg a [data-id],
+.mv-click-clickable .mv-stage svg [data-id] a {
+  cursor: pointer;
+}
+
+.mv-click-all .mv-stage svg [data-id]:not(.pele-cluster):not(.pele-box):not(.pele-section):hover,
+.mv-click-clickable .mv-stage svg .clickable:hover,
+.mv-click-clickable .mv-stage svg .pele-clickable:hover,
+.mv-click-clickable .mv-stage svg [data-callback]:hover {
+  filter: drop-shadow(0 0 3px var(--pele-accent, #5b7bd5));
+}
+
 /* The dark theme sets pele's variables on the container; the SVG reads them. */
 .mv-dark {
   color: #e8e8e8;

@@ -36,6 +36,8 @@ codeunit 68916 "Mermaid Gantt Chart"
         GWeekend: Text;
         GSections: List of [Text];
         GLinks: Dictionary of [Text, Text];
+        GCallbacks: Dictionary of [Text, Text];
+        GCallbackArgs: Dictionary of [Text, Text];
         // Tasks, one entry per task in source order
         TId: List of [Text];
         TName: List of [Text];
@@ -134,6 +136,8 @@ codeunit 68916 "Mermaid Gantt Chart"
         GWeekend := 'saturday';
         Clear(GSections);
         Clear(GLinks);
+        Clear(GCallbacks);
+        Clear(GCallbackArgs);
         Clear(TId);
         Clear(TName);
         Clear(TSection);
@@ -682,6 +686,8 @@ codeunit 68916 "Mermaid Gantt Chart"
         Txt: Text;
         Value: Text;
         HrefText: Text;
+        CallbackName: Text;
+        CallbackArgs: Text;
         HasName: Boolean;
         HasArgs: Boolean;
         HasHref: Boolean;
@@ -804,11 +810,15 @@ codeunit 68916 "Mermaid Gantt Chart"
                         HasName := false;
                         HasArgs := false;
                         HasHref := false;
+                        CallbackName := '';
+                        CallbackArgs := '';
                         if TokType(I) = 10 then begin
                             HasName := true;
+                            CallbackName := TokText(I);
                             I += 1;
                             if TokType(I) = 11 then begin
                                 HasArgs := true;
+                                CallbackArgs := TokText(I);
                                 I += 1;
                             end;
                             if TokType(I) = 9 then begin
@@ -828,8 +838,10 @@ codeunit 68916 "Mermaid Gantt Chart"
                                 I += 1;
                                 if TokType(I) = 10 then begin
                                     HasName := true;
+                                    CallbackName := TokText(I);
                                     I += 1;
                                     if TokType(I) = 11 then begin
+                                        CallbackArgs := TokText(I);
                                         I += 1;
                                         EndStmt(I, '');
                                     end else
@@ -838,9 +850,10 @@ codeunit 68916 "Mermaid Gantt Chart"
                                     EndStmt(I, ', ''callbackname''');
                             end else
                                 FailAt(I, '''callbackname'', ''href''');
-                        // Callbacks are recognized and never run; the task is only marked clickable, as in Mermaid.
+                        // Callbacks are never run as script; the task is marked clickable, as in Mermaid, and the
+                        // callback name and arguments are kept for the viewer's click event.
                         if HasName then
-                            SetClickable(Txt);
+                            SetCallback(Txt, MText.TrimWs(CallbackName), MText.TrimWs(CallbackArgs));
                         if HasHref then
                             SetLink(Txt, HrefText);
                     end;
@@ -1009,6 +1022,24 @@ codeunit 68916 "Mermaid Gantt Chart"
         foreach Id in Ids.Split(',') do
             if ById.ContainsKey(Id) then
                 TClickable.Set(ById.Get(Id), true);
+    end;
+
+    local procedure SetCallback(Ids: Text; CallbackName: Text; CallbackArgs: Text)
+    var
+        Id: Text;
+    begin
+        foreach Id in Ids.Split(',') do
+            if ById.ContainsKey(Id) then begin
+                if GCallbacks.ContainsKey(Id) then
+                    GCallbacks.Set(Id, CallbackName)
+                else
+                    GCallbacks.Add(Id, CallbackName);
+                if GCallbackArgs.ContainsKey(Id) then
+                    GCallbackArgs.Set(Id, CallbackArgs)
+                else
+                    GCallbackArgs.Add(Id, CallbackArgs);
+            end;
+        SetClickable(Ids);
     end;
 
     local procedure SetLink(Ids: Text; Link: Text)
@@ -4247,6 +4278,7 @@ codeunit 68916 "Mermaid Gantt Chart"
     var
         TitleLbl: Codeunit "Mermaid Label";
         Lbl: Codeunit "Mermaid Label";
+        CallbackAttr: Text;
         Categories: Dictionary of [Text, Integer];
         CategoryNames: List of [Text];
         RowOf: List of [Integer];
@@ -4751,7 +4783,10 @@ codeunit 68916 "Mermaid Gantt Chart"
                 if LinkAllowed(Url) then
                     Body := '<a href="' + MText.Esc(Url) + '" rel="noopener">' + Body + '</a>';
             end;
-            TasksOut.Append('<g class="' + Classes + '" data-id="' + MText.EscText(TId.Get(I)) + '">' + Body + '</g>');
+            CallbackAttr := '';
+            if GCallbacks.ContainsKey(TId.Get(I)) then
+                CallbackAttr := Builder.CallbackAttrs(GCallbacks.Get(TId.Get(I)), GCallbackArgs.Get(TId.Get(I)));
+            TasksOut.Append('<g class="' + Classes + '" data-id="' + MText.EscText(TId.Get(I)) + '"' + CallbackAttr + '>' + Body + '</g>');
         end;
 
         TodaySvg := '';

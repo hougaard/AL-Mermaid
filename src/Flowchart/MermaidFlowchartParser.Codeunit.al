@@ -781,12 +781,38 @@ codeunit 68905 "Mermaid Flowchart Parser"
         exit(Value);
     end;
 
+    local procedure LineEndFrom(P: Integer): Integer
+    var
+        E: Integer;
+    begin
+        E := MText.IndexOfFrom(Src, MText.LF(), P);
+        if E = 0 then
+            exit(SrcLen + 1);
+        exit(E);
+    end;
+
+    /// <summary>Marks the nodes clickable and keeps the callback name and arguments for the viewer's click event.</summary>
+    local procedure SetCallback(Ids: Text; CallbackName: Text; CallbackArgs: Text)
+    var
+        Id: Text;
+    begin
+        foreach Id in Ids.Split(',') do
+            if FindNode(Id) then begin
+                TempNode.Callback := CopyStr(CallbackName, 1, MaxStrLen(TempNode.Callback));
+                TempNode."Callback Args" := CopyStr(CallbackArgs, 1, MaxStrLen(TempNode."Callback Args"));
+                TempNode.Modify();
+            end;
+        SetClass(Ids, 'clickable');
+    end;
+
     local procedure ClickStatement()
     var
         Id: Text;
         StartPos: Integer;
         Url: Text;
         Tooltip: Text;
+        CallbackName: Text;
+        CallbackArgs: Text;
         Close: Integer;
     begin
         StartPos := Pos;
@@ -798,17 +824,22 @@ codeunit 68905 "Mermaid Flowchart Parser"
         if MText.StartsWithAt(Src, 'call', Pos) and MText.IsSpace(Ahead(4)) then begin
             Pos += 4;
             SkipBlanks();
+            StartPos := Pos;
             Close := MText.IndexOfFrom(Src, '(', Pos);
-            if Close > 0 then begin
+            if (Close > 0) and (Close < LineEndFrom(Pos)) then begin
+                CallbackName := MText.TrimWs(MText.Substr(Src, StartPos, Close));
                 Pos := Close;
                 Close := MText.IndexOfFrom(Src, ')', Pos);
                 if Close = 0 then
                     Close := SrcLen;
+                CallbackArgs := MText.TrimWs(MText.Substr(Src, Pos + 1, Close));
                 Pos := Close + 1;
-            end else
+            end else begin
                 while (Cur() <> 10) and (Cur() <> -1) do
                     Pos += 1;
-            SetClass(Id, 'clickable');
+                CallbackName := MText.TrimWs(MText.Substr(Src, StartPos, Pos));
+            end;
+            SetCallback(Id, CallbackName, CallbackArgs);
             if IsBlankChar(Cur()) then begin
                 SkipBlanks();
                 if Cur() = 34 then
@@ -830,13 +861,13 @@ codeunit 68905 "Mermaid Flowchart Parser"
             LinkTail(Id, Url);
             exit;
         end;
-        // A callback name: the node is only marked clickable, as in Mermaid's strict mode.
+        // A callback name: never run as script; the node is marked clickable and the viewer reports the name to AL.
         StartPos := Pos;
         while IsIdChar(Cur(), Pos) do
             Pos += 1;
         if Pos = StartPos then
             Fail('''NODE_STRING''');
-        SetClass(Id, 'clickable');
+        SetCallback(Id, MText.Substr(Src, StartPos, Pos), '');
         if IsBlankChar(Cur()) then begin
             SkipBlanks();
             if Cur() = 34 then begin

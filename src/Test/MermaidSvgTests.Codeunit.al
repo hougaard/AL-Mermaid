@@ -531,4 +531,38 @@ codeunit 68911 "Mermaid SVG Tests"
         AssertContains(ErrorMessage, 'Parse error on line 3');
         AssertContains(ErrorMessage, 'Expecting ''taskData'', got ''NL''');
     end;
+
+    // ---------------------------------------------------------------- click callbacks for the viewer's ElementClicked event
+
+    [Test]
+    procedure FlowchartKeepsClickCallbacks()
+    var
+        Svg: Text;
+    begin
+        Svg := MermaidSvg.Render('flowchart LR' + Lf() + 'A --> B' + Lf() + 'click A call openCustomer("10000") "Open customer"' + Lf() + 'click B callbackOnly' + Lf());
+        AssertContains(Svg, 'class="pele-node pele-shape-rect clickable" data-id="A" data-callback="openCustomer" data-args="&quot;10000&quot;"');
+        AssertContains(Svg, 'data-id="B" data-callback="callbackOnly" transform=');
+        AssertContains(Svg, '<title>Open customer</title>');
+        AssertNotContains(Svg, 'onclick');
+    end;
+
+    [Test]
+    procedure ClassDiagramKeepsClickCallbacks()
+    var
+        Svg: Text;
+    begin
+        Svg := MermaidSvg.Render('classDiagram' + Lf() + 'class Customer' + Lf() + 'click Customer call openCustomer("10000")' + Lf());
+        AssertContains(Svg, 'data-callback="openCustomer" data-args="&quot;10000&quot;"');
+        AssertContains(Svg, 'clickable');
+    end;
+
+    [Test]
+    procedure GanttKeepsClickCallbacks()
+    var
+        Svg: Text;
+    begin
+        Svg := MermaidSvg.Render('gantt' + Lf() + 'dateFormat YYYY-MM-DD' + Lf() + 'Task one :t1, 2026-01-05, 3d' + Lf() + 'click t1 call openJob("J1")' + Lf());
+        AssertContains(Svg, 'pele-clickable');
+        AssertContains(Svg, 'data-id="t1" data-callback="openJob" data-args="&quot;J1&quot;"');
+    end;
 }

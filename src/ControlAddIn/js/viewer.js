@@ -1,4 +1,5 @@
-// Viewer for SVG produced by the AL port of pele. AL calls ShowSvg, ShowError and ShowPlaceholder.
+// Viewer for SVG produced by the AL port of pele. AL calls ShowSvg, ShowError, ShowPlaceholder, SetClickMode and
+// SetLinkHandling; the viewer raises ElementClicked when the user clicks an element of the diagram.
 var MermaidViewer = (function () {
   var root = null;
   var stage = null;
@@ -7,8 +8,23 @@ var MermaidViewer = (function () {
   var zoom = 1;
   var fit = true;
   var dark = false;
+  var clickMode = 'all';
+  var linksInAL = false;
 
   var SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // What a clicked element is, from its pele-* classes, most specific first.
+  var KINDS = [
+    'actor', 'message', 'note', 'activation', 'lifeline',
+    'task', 'milestone', 'vert',
+    'commit', 'branch',
+    'slice', 'legend-item',
+    'period', 'event', 'section',
+    'entity', 'class', 'interface', 'namespace',
+    'state',
+    'edge-label', 'edge',
+    'node', 'cluster', 'box'
+  ];
 
   function button(text, title, onClick) {
     var b = document.createElement('button');
@@ -39,6 +55,7 @@ var MermaidViewer = (function () {
 
     stage = document.createElement('div');
     stage.className = 'mv-stage';
+    stage.addEventListener('click', onStageClick);
 
     message = document.createElement('div');
     message.className = 'mv-message';
@@ -47,6 +64,7 @@ var MermaidViewer = (function () {
     root.appendChild(message);
     root.appendChild(stage);
     host.appendChild(root);
+    applyClickMode();
     apply();
   }
 
@@ -71,6 +89,82 @@ var MermaidViewer = (function () {
       svg.style.height = 'auto';
     }
   }
+
+  // ---------------------------------------------------------------- clicks
+
+  function applyClickMode() {
+    if (!root) return;
+    root.classList.remove('mv-click-all', 'mv-click-clickable');
+    if (clickMode === 'all') root.classList.add('mv-click-all');
+    else if (clickMode === 'clickable') root.classList.add('mv-click-clickable');
+  }
+
+  function setClickMode(mode) {
+    var m = String(mode || '').toLowerCase();
+    clickMode = m === 'clickable' || m === 'none' ? m : 'all';
+    applyClickMode();
+  }
+
+  function setLinkHandling(handleInAL) {
+    linksInAL = !!handleInAL;
+  }
+
+  function classesOf(el) {
+    return el.getAttribute('class') || '';
+  }
+
+  function kindOf(classes) {
+    var list = ' ' + classes + ' ';
+    for (var i = 0; i < KINDS.length; i++) {
+      if (list.indexOf(' pele-' + KINDS[i] + ' ') >= 0) return KINDS[i];
+    }
+    var first = classes.split(/\s+/).filter(function (c) { return c.indexOf('pele-') === 0; })[0];
+    return first ? first.substring(5) : 'element';
+  }
+
+  function isClickable(el, anchor) {
+    var classes = ' ' + classesOf(el) + ' ';
+    return !!anchor || el.hasAttribute('data-callback') || classes.indexOf(' clickable ') >= 0 || classes.indexOf(' pele-clickable ') >= 0;
+  }
+
+  // The nearest element with an id, inside the diagram.
+  function targetOf(node) {
+    var svg = stage.querySelector('svg');
+    while (node && node !== stage) {
+      if (node.nodeType === 1 && node.hasAttribute && node.hasAttribute('data-id') && node !== svg) return node;
+      node = node.parentNode;
+    }
+    return null;
+  }
+
+  function anchorOf(node) {
+    while (node && node !== stage) {
+      if (node.nodeType === 1 && node.localName && node.localName.toLowerCase() === 'a') return node;
+      node = node.parentNode;
+    }
+    return null;
+  }
+
+  function onStageClick(e) {
+    if (clickMode === 'none') return;
+    var el = targetOf(e.target);
+    if (!el) return;
+    var anchor = anchorOf(e.target);
+    if (clickMode === 'clickable' && !isClickable(el, anchor)) return;
+    var href = anchor ? (anchor.getAttribute('href') || anchor.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || '') : '';
+    if (anchor && linksInAL) e.preventDefault();
+    var classes = classesOf(el);
+    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('ElementClicked', [
+      kindOf(classes),
+      el.getAttribute('data-id') || '',
+      el.getAttribute('data-callback') || '',
+      el.getAttribute('data-args') || '',
+      href,
+      classes
+    ]);
+  }
+
+  // ---------------------------------------------------------------- content
 
   // Keeps only what draws: no scripts, no foreign content, no event handlers, no script URLs.
   function clean(node) {
@@ -113,7 +207,7 @@ var MermaidViewer = (function () {
       return;
     }
     clean(svg);
-    // Links in a diagram open outside the Business Central frame.
+    // Links in a diagram open outside the Business Central frame, unless AL handles them.
     var anchors = svg.getElementsByTagName('a');
     for (var i = 0; i < anchors.length; i++) anchors[i].setAttribute('target', '_blank');
     stage.appendChild(document.importNode(svg, true));
@@ -134,7 +228,14 @@ var MermaidViewer = (function () {
     message.textContent = text;
   }
 
-  return { init: init, showSvg: showSvg, showError: showError, showPlaceholder: showPlaceholder };
+  return {
+    init: init,
+    showSvg: showSvg,
+    showError: showError,
+    showPlaceholder: showPlaceholder,
+    setClickMode: setClickMode,
+    setLinkHandling: setLinkHandling
+  };
 })();
 
 function ShowSvg(svg) {
@@ -147,4 +248,12 @@ function ShowError(text) {
 
 function ShowPlaceholder(text) {
   MermaidViewer.showPlaceholder(text);
+}
+
+function SetClickMode(mode) {
+  MermaidViewer.setClickMode(mode);
+}
+
+function SetLinkHandling(handleInAL) {
+  MermaidViewer.setLinkHandling(handleInAL);
 }

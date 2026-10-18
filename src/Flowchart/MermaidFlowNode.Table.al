@@ -67,6 +67,14 @@ table 68900 "Mermaid Flow Node"
         {
             Caption = 'Has Label';
         }
+        field(15; Callback; Text[250])
+        {
+            Caption = 'Callback';
+        }
+        field(16; "Callback Args"; Text[2048])
+        {
+            Caption = 'Callback Args';
+        }
         field(20; "Layout Index"; Integer)
         {
             Caption = 'Layout Index';

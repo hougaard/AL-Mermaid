@@ -39,6 +39,8 @@ codeunit 68913 "Mermaid Class Diagram"
         ClsLink: List of [Text];
         ClsLinkTarget: List of [Text];
         ClsTooltip: List of [Text];
+        ClsCallback: List of [Text];
+        ClsCallbackArgs: List of [Text];
         ClsIndex: Dictionary of [Text, Integer];
         MemClass: List of [Integer];
         MemIsMethod: List of [Boolean];
@@ -1162,6 +1164,8 @@ codeunit 68913 "Mermaid Class Diagram"
         Id: Text;
         Annotation: Text;
         IdsText: Text;
+        CallbackName: Text;
+        CallbackArgs: Text;
     begin
         T := TypeAt(TI);
         case T of
@@ -1197,8 +1201,8 @@ codeunit 68913 "Mermaid Class Diagram"
                 begin
                     TI += 1;
                     Id := ReadName(true);
-                    Expect('STR');
-                    SetClickEvent(Id);
+                    CallbackName := Expect('STR');
+                    SetClickEvent(Id, CallbackName, '');
                     TooltipAfter(Id);
                     exit;
                 end;
@@ -1217,10 +1221,13 @@ codeunit 68913 "Mermaid Class Diagram"
                         LinkStatement(Id);
                         exit;
                     end;
-                    Expect('CALLBACK_NAME');
-                    if TypeAt(TI) = 'CALLBACK_ARGS' then
+                    CallbackName := MText.TrimWs(Expect('CALLBACK_NAME'));
+                    CallbackArgs := '';
+                    if TypeAt(TI) = 'CALLBACK_ARGS' then begin
+                        CallbackArgs := MText.TrimWs(TextAt(TI));
                         TI += 1;
-                    SetClickEvent(Id);
+                    end;
+                    SetClickEvent(Id, CallbackName, CallbackArgs);
                     TooltipAfter(Id);
                     exit;
                 end;
@@ -1382,6 +1389,8 @@ codeunit 68913 "Mermaid Class Diagram"
         ClsLink.Add('');
         ClsLinkTarget.Add('');
         ClsTooltip.Add('');
+        ClsCallback.Add('');
+        ClsCallbackArgs.Add('');
         ClsIndex.Add(ClassName, ClsId.Count());
         Tag(ClsId.Count(), 'default');
     end;
@@ -1557,9 +1566,20 @@ codeunit 68913 "Mermaid Class Diagram"
         SetCssClass(Ids, 'clickable');
     end;
 
-    /// <summary>Callbacks are never executed; the class is only marked clickable, as in Mermaid's strict mode.</summary>
-    local procedure SetClickEvent(Ids: Text)
+    /// <summary>
+    /// Callbacks are never executed as script. The class is marked clickable, as in Mermaid's strict mode, and the
+    /// callback name and arguments are kept for the viewer's click event.
+    /// </summary>
+    local procedure SetClickEvent(Ids: Text; CallbackName: Text; CallbackArgs: Text)
+    var
+        Id: Text;
+        K: Integer;
     begin
+        foreach Id in Ids.Split(',') do
+            if ClsIndex.Get(LookupId(Id), K) then begin
+                ClsCallback.Set(K, CallbackName);
+                ClsCallbackArgs.Set(K, CallbackArgs);
+            end;
         SetCssClass(Ids, 'clickable');
     end;
 
@@ -3364,7 +3384,8 @@ codeunit 68913 "Mermaid Class Diagram"
                 Target := ' target="' + ClsLinkTarget.Get(K) + '"';
             Result := '<a href="' + MText.Esc(Href) + '"' + Target + ' rel="noopener">' + Result + '</a>';
         end;
-        exit('<g class="pele-node pele-class' + Builder.ClassNames(CssWithoutDefault(ClsCss.Get(K))) + '" data-id="' + Id + '"' + At + '>' + Result + '</g>');
+        exit('<g class="pele-node pele-class' + Builder.ClassNames(CssWithoutDefault(ClsCss.Get(K))) + '" data-id="' + Id + '"' +
+             Builder.CallbackAttrs(ClsCallback.Get(K), ClsCallbackArgs.Get(K)) + At + '>' + Result + '</g>');
     end;
 
     local procedure CssWithoutDefault(Css: Text): Text
