@@ -206,7 +206,163 @@ The **Clicks** group on the Mermaid Playground has **Click events** (all element
 
 For example, load **Flowchart with subgraphs** and click the **Paid** node. **Last click** shows `node "paid"` and `Callback: openInvoice("103001")`. Clicking **Customer order** reports its link to the Business Central documentation.
 
-Other ways to use the SVG:
+## Embedding the SVG in your own control add-in
+
+Use the included "Mermaid SVG Viewer" when it fits. Build your own control add-in when you need a different layout, extra controls, or diagrams combined with other content. The renderer only produces SVG text, so any control add-in can show it. This section lists what yours needs. The included viewer, in `src/ControlAddIn`, is a complete working example.
+
+### The control add-in object
+
+At minimum it needs:
+- **A `ControlReady` event,** so AL knows when the JavaScript is loaded. Never call into the add-in before this event.
+- **A procedure that takes the SVG text,** such as `ShowSvg`.
+- **An event for clicks,** if users should interact with the diagram.
+
+```al
+controladdin "My Diagram Host"
+{
+    Scripts = 'src/MyDiagram/diagram.js';
+    StartupScript = 'src/MyDiagram/startup.js';
+    StyleSheets = 'src/MyDiagram/diagram.css';
+    RequestedHeight = 400;
+    VerticalStretch = true;
+    HorizontalStretch = true;
+
+    event ControlReady();
+    event DiagramClicked(Kind: Text; Id: Text; Callback: Text; Arguments: Text; Href: Text);
+
+    procedure ShowSvg(Svg: Text);
+}
+```
+
+On the page, render in the `ControlReady` trigger, as in the viewer example above:
+
+```al
+usercontrol(Diagram; "My Diagram Host")
+{
+    ApplicationArea = All;
+
+    trigger ControlReady()
+    begin
+        CurrPage.Diagram.ShowSvg(MermaidSvg.Render(DiagramSource));
+    end;
+
+    trigger DiagramClicked(Kind: Text; Id: Text; Callback: Text; Arguments: Text; Href: Text)
+    begin
+        // Act on the click: open a record, filter a list, ...
+    end;
+}
+```
+
+### The startup script
+
+`startup.js` builds the container and raises `ControlReady`:
+
+```js
+var host = document.getElementById('controlAddIn');
+var stage = document.createElement('div');
+stage.className = 'diagram-stage';
+host.appendChild(stage);
+DiagramHost.init(stage);
+Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('ControlReady', []);
+```
+
+### The script that shows the SVG and reports clicks
+
+`diagram.js` defines the global functions that AL procedures call. Each `procedure` in the control add-in maps to a global JavaScript function of the same name.
+
+```js
+var DiagramHost = (function () {
+  var stage = null;
+
+  function init(element) {
+    stage = element;
+    // One listener for the whole diagram: it finds the nearest element with an id.
+    stage.addEventListener('click', function (e) {
+      var el = e.target.closest('[data-id]');
+      if (!el || !stage.contains(el) || el.localName === 'svg') return;
+      var link = e.target.closest('a');
+      if (link) e.preventDefault();   // let AL decide what a link does
+      Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('DiagramClicked', [
+        kindOf(el.getAttribute('class') || ''),
+        el.getAttribute('data-id') || '',
+        el.getAttribute('data-callback') || '',
+        el.getAttribute('data-args') || '',
+        link ? (link.getAttribute('href') || '') : ''
+      ]);
+    });
+  }
+
+  // The first pele-* class says what the element is, such as pele-node or pele-edge.
+  function kindOf(classes) {
+    var match = /(?:^|\s)pele-([a-z-]+)/.exec(classes);
+    return match ? match[1] : 'element';
+  }
+
+  // Removes anything that could run code: scripts, foreign content, event handlers and script URLs.
+  function clean(node) {
+    Array.prototype.slice.call(node.children).forEach(function (child) {
+      var name = child.localName.toLowerCase();
+      if (name === 'script' || name === 'foreignobject' || name === 'iframe') {
+        child.remove();
+        return;
+      }
+      Array.prototype.slice.call(child.attributes).forEach(function (attr) {
+        var value = attr.value.replace(/\s+/g, '').toLowerCase();
+        if (attr.name.toLowerCase().indexOf('on') === 0 ||
+            (/href$/i.test(attr.name) && /^(javascript|vbscript|data):/.test(value))) {
+          child.removeAttribute(attr.name);
+        }
+      });
+      clean(child);
+    });
+  }
+
+  function show(svgText) {
+    var doc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
+    var svg = doc.documentElement;
+    stage.textContent = '';
+    if (svg.localName !== 'svg' || doc.getElementsByTagName('parsererror').length > 0) {
+      stage.textContent = 'The diagram could not be shown.';
+      return;
+    }
+    clean(svg);
+    stage.appendChild(document.importNode(svg, true));
+  }
+
+  return { init: init, show: show };
+})();
+
+function ShowSvg(svgText) {
+  DiagramHost.show(svgText);
+}
+```
+
+### The stylesheet
+
+```css
+html, body, #controlAddIn { height: 100%; margin: 0; overflow: hidden; }
+.diagram-stage { height: 100%; overflow: auto; padding: 8px; box-sizing: border-box; }
+.diagram-stage svg [data-callback], .diagram-stage svg .clickable { cursor: pointer; }
+
+/* Optional: your own theme, read by the SVG through its CSS variables. */
+.diagram-stage { --pele-accent: #0078d4; --pele-surface: #f5f9fd; }
+```
+
+### What to keep in mind
+
+- **Insert the SVG as live elements, not as an image.** Parse it with `DOMParser` and import the node, as above. An `<img src="data:image/svg+xml,...">` also displays it, but clicks can't reach its elements. Your `--pele-*` CSS variables can't reach into it either, so it always uses the default light theme.
+- **Clean the SVG before inserting it.** The renderer escapes all diagram text and filters styles and links. Cleaning in the browser is a second line of defence, in case the SVG text comes from somewhere else, such as a stored field.
+- **What the SVG gives you for clicks:**
+  - **`data-id`:** almost every element carries one. For flowchart nodes it is the node id from the Mermaid text.
+  - **`data-callback` and `data-args`:** clickable elements with a `click X call name(args)` statement have both.
+  - **Classes:** `pele-*` classes say what each element is, and classes from `:::` and `class` statements are added to them.
+- **Several diagrams on one page:** give each its own prefix with `SetIdPrefix`. The ids inside each SVG then stay unique.
+- **Sizing:** by default the SVG has `max-width:100%` and shrinks to its container. Call `SetResponsive(false)` for natural size, and scroll the container instead.
+- **Theming:** the SVG reads `--pele-*` variables from any ancestor element. Set them in your stylesheet, or switch them from JavaScript for a dark mode. See [Theming](#theming).
+- **Large diagrams:** an SVG of several hundred kilobytes passes through a control add-in procedure without problems. `SetLimits` caps the output size.
+
+## Other ways to use the SVG
+
 - **Image:** save it in a `Blob` or `Media` field, or embed it as a data URI: `data:image/svg+xml;utf8,` followed by the URL-encoded SVG.
 - **Email or report:** an SVG works in HTML email bodies and in reports that accept images. Some email clients don't display SVG.
 
