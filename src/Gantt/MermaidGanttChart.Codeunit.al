@@ -92,9 +92,6 @@ codeunit 68916 "Mermaid Gantt Chart"
         HasDay: Boolean;
         DayGiven: Boolean;
         HasHours: Boolean;
-        HasMinutes: Boolean;
-        HasSeconds: Boolean;
-        HasMs: Boolean;
         HasWeek: Boolean;
         HasOffset: Boolean;
         HasAfternoon: Boolean;
@@ -812,44 +809,49 @@ codeunit 68916 "Mermaid Gantt Chart"
                         HasHref := false;
                         CallbackName := '';
                         CallbackArgs := '';
-                        if TokType(I) = 10 then begin
-                            HasName := true;
-                            CallbackName := TokText(I);
-                            I += 1;
-                            if TokType(I) = 11 then begin
-                                HasArgs := true;
-                                CallbackArgs := TokText(I);
-                                I += 1;
-                            end;
-                            if TokType(I) = 9 then begin
-                                HrefText := TokText(I);
-                                HasHref := true;
-                                I += 1;
-                                EndStmt(I, '');
-                            end else
-                                if HasArgs then
-                                    EndStmt(I, ', ''href''')
-                                else
-                                    EndStmt(I, ', ''callbackargs'', ''href''');
-                        end else
-                            if TokType(I) = 9 then begin
-                                HrefText := TokText(I);
-                                HasHref := true;
-                                I += 1;
-                                if TokType(I) = 10 then begin
+                        case TokType(I) of
+                            10:
+                                begin
                                     HasName := true;
                                     CallbackName := TokText(I);
                                     I += 1;
                                     if TokType(I) = 11 then begin
+                                        HasArgs := true;
                                         CallbackArgs := TokText(I);
+                                        I += 1;
+                                    end;
+                                    if TokType(I) = 9 then begin
+                                        HrefText := TokText(I);
+                                        HasHref := true;
                                         I += 1;
                                         EndStmt(I, '');
                                     end else
-                                        EndStmt(I, ', ''callbackargs''');
-                                end else
-                                    EndStmt(I, ', ''callbackname''');
-                            end else
+                                        if HasArgs then
+                                            EndStmt(I, ', ''href''')
+                                        else
+                                            EndStmt(I, ', ''callbackargs'', ''href''');
+                                end;
+                            9:
+                                begin
+                                    HrefText := TokText(I);
+                                    HasHref := true;
+                                    I += 1;
+                                    if TokType(I) = 10 then begin
+                                        HasName := true;
+                                        CallbackName := TokText(I);
+                                        I += 1;
+                                        if TokType(I) = 11 then begin
+                                            CallbackArgs := TokText(I);
+                                            I += 1;
+                                            EndStmt(I, '');
+                                        end else
+                                            EndStmt(I, ', ''callbackargs''');
+                                    end else
+                                        EndStmt(I, ', ''callbackname''');
+                                end;
+                            else
                                 FailAt(I, '''callbackname'', ''href''');
+                        end;
                         // Callbacks are never run as script; the task is marked clickable, as in Mermaid, and the
                         // callback name and arguments are kept for the viewer's click event.
                         if HasName then
@@ -874,7 +876,7 @@ codeunit 68916 "Mermaid Gantt Chart"
     begin
         // txt.replace(/\n\s+/g, '\n')
         I := 1;
-        while I <= StrLen(Value) do begin
+        while I <= StrLen(Value) do
             if Value[I] = 10 then begin
                 if MText.IsSpace(MText.CharAt(Value, I + 1)) then begin
                     Out.Append(MText.LF());
@@ -889,7 +891,6 @@ codeunit 68916 "Mermaid Gantt Chart"
                 Out.Append(CopyStr(Value, I, 1));
                 I += 1;
             end;
-        end;
         exit(Out.ToText());
     end;
 
@@ -940,22 +941,20 @@ codeunit 68916 "Mermaid Gantt Chart"
             Searching := false;
             if Data.Count() > 0 then begin
                 Tag := MText.TrimWs(Data.Get(1));
-                if Tag = 'active' then
-                    IsActive := true
-                else
-                    if Tag = 'done' then
-                        IsDone := true
+                case Tag of
+                    'active':
+                        IsActive := true;
+                    'done':
+                        IsDone := true;
+                    'crit':
+                        IsCrit := true;
+                    'milestone':
+                        IsMilestone := true;
+                    'vert':
+                        IsVert := true;
                     else
-                        if Tag = 'crit' then
-                            IsCrit := true
-                        else
-                            if Tag = 'milestone' then
-                                IsMilestone := true
-                            else
-                                if Tag = 'vert' then
-                                    IsVert := true
-                                else
-                                    Tag := '';
+                        Tag := '';
+                end;
                 if Tag <> '' then begin
                     Data.RemoveAt(1);
                     Searching := true;
@@ -1686,11 +1685,6 @@ codeunit 68916 "Mermaid Gantt Chart"
         exit((PosModB(T, DayMs()) div 1000) mod 60);
     end;
 
-    local procedure TMillis(T: BigInteger): Integer
-    begin
-        exit(PosModB(T, 1000));
-    end;
-
     /// <summary>new Date(y, m, d, h, mi, s, ms) without the two-digit year rule: fields overflow into the next ones.</summary>
     local procedure MakeT(Y: Decimal; M0: Decimal; D: Decimal; H: Decimal; Mi: Decimal; S: Decimal; Ms: Decimal): BigInteger
     var
@@ -1955,6 +1949,7 @@ codeunit 68916 "Mermaid Gantt Chart"
     var
         L: Integer;
     begin
+        L := 0;
         while (L < MaxLen) and (MText.CharAt(Str, P + L) = Ch) do
             L += 1;
         exit(L);
@@ -2394,6 +2389,7 @@ codeunit 68916 "Mermaid Gantt Chart"
     var
         L: Integer;
     begin
+        L := 0;
         while MText.IsDigit(MText.CharAt(Str, P + L)) do
             L += 1;
         exit(L);
@@ -2476,6 +2472,7 @@ codeunit 68916 "Mermaid Gantt Chart"
         Negative: Boolean;
         C: Integer;
     begin
+        Result := 0;
         I := 1;
         if CopyStr(Value, 1, 1) = '-' then begin
             Negative := true;
@@ -2512,9 +2509,6 @@ codeunit 68916 "Mermaid Gantt Chart"
         HasDay := false;
         DayGiven := false;
         HasHours := false;
-        HasMinutes := false;
-        HasSeconds := false;
-        HasMs := false;
         HasWeek := false;
         HasOffset := false;
         HasAfternoon := false;
@@ -2527,6 +2521,7 @@ codeunit 68916 "Mermaid Gantt Chart"
         J: Integer;
         Names: Text;
     begin
+        Value := 0;
         case Token of
             'A':
                 begin
@@ -2544,27 +2539,18 @@ codeunit 68916 "Mermaid Gantt Chart"
                     HasMonth := true;
                 end;
             'S', 'SS', 'SSS':
-                begin
-                    case Token of
-                        'S':
-                            FMs := NumOf(Input) * 100;
-                        'SS':
-                            FMs := NumOf(Input) * 10;
-                        else
-                            FMs := NumOf(Input);
-                    end;
-                    HasMs := true;
+                case Token of
+                    'S':
+                        FMs := NumOf(Input) * 100;
+                    'SS':
+                        FMs := NumOf(Input) * 10;
+                    else
+                        FMs := NumOf(Input);
                 end;
             's', 'ss':
-                begin
-                    FSeconds := NumOf(Input);
-                    HasSeconds := true;
-                end;
+                FSeconds := NumOf(Input);
             'm', 'mm':
-                begin
-                    FMinutes := NumOf(Input);
-                    HasMinutes := true;
-                end;
+                FMinutes := NumOf(Input);
             'H', 'h', 'HH', 'hh':
                 begin
                     FHours := NumOf(Input);
@@ -2992,6 +2978,7 @@ codeunit 68916 "Mermaid Gantt Chart"
         YearLen: Integer;
         T: BigInteger;
     begin
+        LastSign := 0;
         N := StrLen(Str);
         I := 1;
         while I <= N do begin
@@ -3083,13 +3070,14 @@ codeunit 68916 "Mermaid Gantt Chart"
                             J += 1;
                         I := J;
                     end;
-                    if C = 43 then
-                        LastSign := 1
-                    else
-                        if C = 45 then
-                            LastSign := -1
+                    case C of
+                        43:
+                            LastSign := 1;
+                        45:
+                            LastSign := -1;
                         else
                             LastSign := 0;
+                    end;
                     I += 1;
                 end;
         end;
@@ -3375,6 +3363,7 @@ codeunit 68916 "Mermaid Gantt Chart"
         HasPrevious: Boolean;
         Going: Boolean;
     begin
+        Previous := 0;
         Clear(Ticks);
         D := CalFloor(StartT - 1);
         D := CalOffset(D, 1);
@@ -3510,25 +3499,30 @@ codeunit 68916 "Mermaid Gantt Chart"
         I := 1;
         while (I <= 18) and (AutoMs(I) <= Target) do
             I += 1;
-        if I = 19 then begin
-            YearMs := UnitMs(7);
-            Step := TickStep(StartT / YearMs, StopT / YearMs, TickCount);
-            if Step < 1 then
-                Step := 1;
-            SetCalendar(7, Step, 0);
-        end else
-            if I = 1 then begin
-                Step := TickStep(StartT, StopT, TickCount);
-                if Step < 1 then
-                    Step := 1;
-                SetCalendar(0, Step, 0);
-            end else begin
+        case I of
+            19:
+                begin
+                    YearMs := UnitMs(7);
+                    Step := TickStep(StartT / YearMs, StopT / YearMs, TickCount);
+                    if Step < 1 then
+                        Step := 1;
+                    SetCalendar(7, Step, 0);
+                end;
+            1:
+                begin
+                    Step := TickStep(StartT, StopT, TickCount);
+                    if Step < 1 then
+                        Step := 1;
+                    SetCalendar(0, Step, 0);
+                end;
+            else begin
                 if Target / AutoMs(I - 1) < AutoMs(I) / Target then
                     K := I - 1
                 else
                     K := I;
                 SetCalendar(AutoUnit(K), AutoStep(K), 0);
             end;
+        end;
         if not TickRange(StartT, StopT, 4 * TickCount + 8, Ticks) then
             Clear(Ticks);
     end;
@@ -4404,6 +4398,7 @@ codeunit 68916 "Mermaid Gantt Chart"
         TaskIdx: Integer;
         Offset: Integer;
     begin
+        LastRight := 0;
         Size := MText.FontSize();
         Pad := 8;
         LabelSize := Setting(Config, 'fontSize', 4, 72, Round(Size * 0.8125, 1));

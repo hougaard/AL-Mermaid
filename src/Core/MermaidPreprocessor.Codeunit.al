@@ -239,6 +239,7 @@ codeunit 68901 "Mermaid Preprocessor"
         Quote: Integer;
         C: Integer;
     begin
+        Quote := 0;
         for I := 1 to StrLen(Content) do begin
             C := Content[I];
             if Quote <> 0 then begin
@@ -474,15 +475,16 @@ codeunit 68901 "Mermaid Preprocessor"
             J := FromPos + StrLen(Keyword);
             while (Hash = 0) and (J < LineEnd) do begin
                 C := MText.CharAt(Txt, J);
-                if C = 58 then
-                    AfterColon := true
-                else
-                    if C = 35 then begin
+                case C of
+                    58:
+                        AfterColon := true;
+                    35:
                         if AfterColon then
                             Hash := J;
-                    end else
+                    else
                         if MText.IsSpace(C) then
                             AfterColon := false;
+                end;
                 J += 1;
             end;
             if Hash > 0 then begin

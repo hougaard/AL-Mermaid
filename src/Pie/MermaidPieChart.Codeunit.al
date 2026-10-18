@@ -311,6 +311,7 @@ codeunit 68910 "Mermaid Pie Chart"
         LegendText: Text;
         AnyNarrow: Boolean;
     begin
+        LegendWidth := 0;
         Init();
         Size := MText.FontSize();
         Small := Round(Size * 0.875, 1);

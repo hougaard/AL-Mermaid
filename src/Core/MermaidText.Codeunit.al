@@ -23,12 +23,12 @@ codeunit 68902 "Mermaid Text"
 
     // ---------------------------------------------------------------- render options
 
-    procedure SetOptions(IdPrefix: Text; FontFamily: Text; FontSize: Decimal; Responsive: Boolean)
+    procedure SetOptions(NewIdPrefix: Text; NewFontFamily: Text; NewFontSize: Decimal; NewResponsive: Boolean)
     begin
-        OptIdPrefix := IdPrefix;
-        OptFontFamily := FontFamily;
-        OptFontSize := FontSize;
-        OptResponsive := Responsive;
+        OptIdPrefix := NewIdPrefix;
+        OptFontFamily := NewFontFamily;
+        OptFontSize := NewFontSize;
+        OptResponsive := NewResponsive;
         OptionsSet := true;
     end;
 

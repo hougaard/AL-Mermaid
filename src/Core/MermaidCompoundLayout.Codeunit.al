@@ -223,6 +223,7 @@ codeunit 68912 "Mermaid Compound Layout"
         I: Integer;
         Result: Integer;
     begin
+        Result := 0;
         ResolveParents();
         for I := 1 to CW.Count() do
             if CDepth.Get(I) > Result then
@@ -236,6 +237,7 @@ codeunit 68912 "Mermaid Compound Layout"
         P: Integer;
         Hops: Integer;
     begin
+        Hops := 0;
         ResolveParents();
         P := CParent.Get(I);
         while (P <> 0) and (Hops <= CW.Count()) do begin
@@ -660,14 +662,14 @@ codeunit 68912 "Mermaid Compound Layout"
     end;
 
     /// <summary>Turns a point of a top-to-bottom layout into the level's direction.</summary>
-    local procedure Orient(Lx: Decimal; Ly: Decimal; Dir: Text; Wc: Decimal; Hc: Decimal; var X: Decimal; var Y: Decimal)
+    local procedure Orient(LocalX: Decimal; LocalY: Decimal; Dir: Text; Wc: Decimal; Hc: Decimal; var X: Decimal; var Y: Decimal)
     begin
         if (Dir = 'TB') or (Dir = 'BT') then begin
-            X := Lx;
-            Y := Ly;
+            X := LocalX;
+            Y := LocalY;
         end else begin
-            X := Ly;
-            Y := Lx;
+            X := LocalY;
+            Y := LocalX;
         end;
         if Dir = 'BT' then
             Y := Hc - Y;

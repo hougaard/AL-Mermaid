@@ -421,18 +421,18 @@ codeunit 68915 "Mermaid ER Diagram"
     var
         E: Integer;
         Q: Integer;
-        IsName: Boolean;
+        IsNameToken: Boolean;
     begin
         E := MText.IndexOfFrom(Src, '"', LexPos + 1);
         if E = 0 then begin
             Emit('CHAR', LexPos, LexPos + 1);
             exit;
         end;
-        IsName := E > LexPos + 1;
+        IsNameToken := E > LexPos + 1;
         for Q := LexPos + 1 to E - 1 do
             if Ch(Q) in [37, 92, 13, 10, 11, 8] then
-                IsName := false;
-        if IsName then
+                IsNameToken := false;
+        if IsNameToken then
             Emit('ENTITY_NAME', LexPos, E + 1)
         else
             Emit('WORD', LexPos, E + 1);
@@ -628,13 +628,14 @@ codeunit 68915 "Mermaid ER Diagram"
                 end;
             45:
                 begin
-                    if D = 45 then
-                        Emit('IDENTIFYING', LexPos, LexPos + 2)
-                    else
-                        if D = 46 then
-                            Emit('NON_IDENTIFYING', LexPos, LexPos + 2)
+                    case D of
+                        45:
+                            Emit('IDENTIFYING', LexPos, LexPos + 2);
+                        46:
+                            Emit('NON_IDENTIFYING', LexPos, LexPos + 2);
                         else
                             exit(false);
+                    end;
                     exit(true);
                 end;
         end;
@@ -1861,6 +1862,7 @@ codeunit 68915 "Mermaid ER Diagram"
         HeadH: Decimal;
         Room: Decimal;
     begin
+        Columns := 0;
         if NStyles.Get(I) <> '' then
             foreach Style in NStyles.Get(I).Split(MText.LF()) do
                 Styles.Add(Style);
@@ -2259,20 +2261,20 @@ codeunit 68915 "Mermaid ER Diagram"
         Dx: Decimal;
         Dy: Decimal;
         CW: Decimal;
-        CH: Decimal;
+        CHeight: Decimal;
     begin
         if NIsGroup.Get(I) then
             exit;
         Dx := Route.Get(At) - Layout.NodeX(I);
         Dy := Route.Get(At + 1) - Layout.NodeY(I);
         CW := Layout.NodeW(I);
-        CH := Layout.NodeH(I);
+        CHeight := Layout.NodeH(I);
         if CW <> VW.Get(I) then
             if Abs(Abs(Dx) - CW / 2) < 0.5 then
                 Route.Set(At, Route.Get(At) - MText.Sign(Dx) * (CW - VW.Get(I)) / 2);
-        if CH <> VH.Get(I) then
-            if Abs(Abs(Dy) - CH / 2) < 0.5 then
-                Route.Set(At + 1, Route.Get(At + 1) - MText.Sign(Dy) * (CH - VH.Get(I)) / 2);
+        if CHeight <> VH.Get(I) then
+            if Abs(Abs(Dy) - CHeight / 2) < 0.5 then
+                Route.Set(At + 1, Route.Get(At + 1) - MText.Sign(Dy) * (CHeight - VH.Get(I)) / 2);
     end;
 
     // ---------------------------------------------------------------- drawing
@@ -2285,7 +2287,7 @@ codeunit 68915 "Mermaid ER Diagram"
         Cx: Decimal;
         Cy: Decimal;
         CW: Decimal;
-        CH: Decimal;
+        CHeight: Decimal;
         Top: Decimal;
         Left: Decimal;
         Half: Decimal;
@@ -2299,10 +2301,10 @@ codeunit 68915 "Mermaid ER Diagram"
         Cx := Layout.NodeX(I);
         Cy := Layout.NodeY(I);
         CW := Layout.NodeW(I);
-        CH := Layout.NodeH(I);
+        CHeight := Layout.NodeH(I);
         if TitleWidth = 0 then
             exit(Cx);
-        Top := Cy - CH / 2;
+        Top := Cy - CHeight / 2;
         Left := Cx - CW / 2;
         Half := TitleWidth / 2;
         Candidates.Add(Left + 20 - 6 + Half);

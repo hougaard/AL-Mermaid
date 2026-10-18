@@ -523,12 +523,12 @@ codeunit 68904 "Mermaid SVG Builder"
         exit(Abs(Xs.Get(I) - Xs.Get(I - 1)) * Abs(Ux) + Abs(Ys.Get(I) - Ys.Get(I - 1)) * Abs(Uy));
     end;
 
-    local procedure Lead(Reach: Decimal; Trim: Decimal; Run: Decimal): Decimal
+    local procedure Lead(Reach: Decimal; Trim: Decimal; RunLength: Decimal): Decimal
     var
         Room: Decimal;
     begin
-        Room := MText.MinDec(MText.MaxDec(0, Reach - LeadLen - Trim), Run / 4);
-        exit(Room + MText.MinDec(Reach - Trim - Room, (Run - Room) / 4));
+        Room := MText.MinDec(MText.MaxDec(0, Reach - LeadLen - Trim), RunLength / 4);
+        exit(Room + MText.MinDec(Reach - Trim - Room, (RunLength - Room) / 4));
     end;
 
     /// <summary>

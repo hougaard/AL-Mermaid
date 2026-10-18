@@ -433,6 +433,8 @@ codeunit 68919 "Mermaid Journey Timeline"
         Mant: Decimal;
         Big: Decimal;
     begin
+        Mant := 0;
+        ExpValue := 0;
         Result := 0;
         IsNaN := false;
         Big := 100000000000000000000.0;
@@ -722,11 +724,11 @@ codeunit 68919 "Mermaid Journey Timeline"
             end;
     end;
 
-    local procedure Face(X: Decimal; Y: Decimal; Mood: Text): Text
+    local procedure Face(X: Decimal; Y: Decimal; MoodName: Text): Text
     var
         Mouth: Text;
     begin
-        case Mood of
+        case MoodName of
             'happy':
                 Mouth := 'M-5,2A6,6 0 0 0 5,2';
             'sad':
@@ -734,7 +736,7 @@ codeunit 68919 "Mermaid Journey Timeline"
             else
                 Mouth := 'M-4.5,4.5H4.5';
         end;
-        exit('<g class="pele-face pele-face-' + Mood + '" transform="translate(' + MText.Num(X) + ',' + MText.Num(Y) + ')">' +
+        exit('<g class="pele-face pele-face-' + MoodName + '" transform="translate(' + MText.Num(X) + ',' + MText.Num(Y) + ')">' +
              '<circle r="11" fill="var(--_bg)" stroke="var(--_l)"/>' +
              '<g fill="var(--_l)"><circle cx="-3.6" cy="-2.8" r="1.3"/><circle cx="3.6" cy="-2.8" r="1.3"/></g>' +
              '<path d="' + Mouth + '" fill="none" stroke="var(--_l)" stroke-linecap="round"/>' +

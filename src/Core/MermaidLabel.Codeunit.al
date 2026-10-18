@@ -304,6 +304,7 @@ codeunit 68903 "Mermaid Label"
         Handled: Boolean;
         Marker: Text;
     begin
+        Marked := 0;
         StyleValue := Base;
         N := StrLen(Source);
         I := 1;

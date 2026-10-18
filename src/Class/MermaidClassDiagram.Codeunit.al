@@ -318,15 +318,20 @@ codeunit 68913 "Mermaid Class Diagram"
                         LexPos += 1;
                     end else
                         if not LexKeyword(C) then
-                            if C = 126 then begin
-                                Push(3);
-                                LexPos += 1;
-                            end else
-                                if C = 96 then begin
-                                    Pop();
-                                    LexPos += 1;
-                                end else
+                            case C of
+                                126:
+                                    begin
+                                        Push(3);
+                                        LexPos += 1;
+                                    end;
+                                96:
+                                    begin
+                                        Pop();
+                                        LexPos += 1;
+                                    end;
+                                else
                                     Emit('BQUOTE_STR', LexPos, UntilCh('`'));
+                            end;
                 4:
                     // callbackName
                     if C = 40 then begin
@@ -1973,6 +1978,7 @@ codeunit 68913 "Mermaid Class Diagram"
         K: Integer;
         Hops: Integer;
     begin
+        Hops := 0;
         if Hierarchical or (Id = '') then
             exit(Id);
         Current := Id;
@@ -2372,16 +2378,15 @@ codeunit 68913 "Mermaid Class Diagram"
 
     local procedure Draw(var Config: Dictionary of [Text, Text]): Text
     var
+        TitleLbl: Codeunit "Mermaid Label";
         Children: List of [Integer];
         Crossed: List of [Boolean];
         Crowd: List of [Decimal];
         Content: TextBuilder;
-        TitleLbl: Codeunit "Mermaid Label";
         HideEmpty: Boolean;
         RootDir: Text;
         Pad: Decimal;
         I: Integer;
-        G: Integer;
         A: Integer;
         B: Integer;
         Slot: Integer;
@@ -2613,6 +2618,7 @@ codeunit 68913 "Mermaid Class Diagram"
     var
         Hops: Integer;
     begin
+        Hops := 0;
         while (G > 0) and (Hops <= GId.Count()) do begin
             if Crossed.Get(G) then
                 exit;
@@ -2770,7 +2776,7 @@ codeunit 68913 "Mermaid Class Diagram"
     end;
 
     /// <summary>Records where an edge reaches a side of a class; returns the end's number, or 0 off the box.</summary>
-    local procedure Attach(D: Integer; AtEnd: Boolean; Itm: Integer; Room: Decimal; OrderNo: Integer): Integer
+    local procedure Attach(D: Integer; AtEndSide: Boolean; Itm: Integer; Room: Decimal; OrderNo: Integer): Integer
     var
         At: Integer;
         Side: Integer;
@@ -2781,7 +2787,7 @@ codeunit 68913 "Mermaid Class Diagram"
         Bend: Decimal;
         After: Boolean;
     begin
-        if AtEnd then
+        if AtEndSide then
             At := RouteCount(D) - 2
         else
             At := 1;
@@ -2824,6 +2830,7 @@ codeunit 68913 "Mermaid Class Diagram"
         Dx: Decimal;
         Dy: Decimal;
     begin
+        Hops := 0;
         G := Layout.NodeParent(Itm);
         while (G > 0) and (Hops < 10000) do begin
             Dx := Abs(X - Layout.NodeX(G));
@@ -3455,7 +3462,7 @@ codeunit 68913 "Mermaid Class Diagram"
         S: Integer;
         K: Integer;
         StartType: Text;
-        EndType: Text;
+        EndTypeName: Text;
         StartTrim: Decimal;
         EndTrim: Decimal;
         X: Decimal;
@@ -3479,9 +3486,9 @@ codeunit 68913 "Mermaid Class Diagram"
             E := DEdge.Get(I);
             S := DSrc.Get(I);
             StartType := GeStartMarker.Get(E);
-            EndType := GeEndMarker.Get(E);
+            EndTypeName := GeEndMarker.Get(E);
             StartTrim := ClassMarkerTrim(StartType);
-            EndTrim := ClassMarkerTrim(EndType);
+            EndTrim := ClassMarkerTrim(EndTypeName);
             Drawn := false;
             if S = DDst.Get(I) then begin
                 K := DLoopAt.Get(I);
@@ -3517,7 +3524,7 @@ codeunit 68913 "Mermaid Class Diagram"
                 Edges.Append('<g class="pele-edge' + EdgeClass + '" data-id="' + MText.EscText(GeId.Get(E)) + '">' +
                              '<path d="' + D + '"' + Attrs + '/>' +
                              ClassMarker(StartType, Sx, Sy, Sdx, Sdy, 'var(--_l)') +
-                             ClassMarker(EndType, Ex, Ey, Edx, Edy, 'var(--_l)') + '</g>');
+                             ClassMarker(EndTypeName, Ex, Ey, Edx, Edy, 'var(--_l)') + '</g>');
             end;
             if DLabelW.Get(I) > 0 then begin
                 Lbl.Layout(GeLabel.Get(E), true, Small, 200, 0);

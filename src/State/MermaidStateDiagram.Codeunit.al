@@ -393,10 +393,10 @@ codeunit 68914 "Mermaid State Diagram"
         P := E;
     end;
 
-    local procedure Push(NewState: Integer)
+    local procedure Push(StateNo: Integer)
     begin
         LexStack.Add(LexState);
-        LexState := NewState;
+        LexState := StateNo;
     end;
 
     local procedure Pop()
@@ -1325,7 +1325,6 @@ codeunit 68914 "Mermaid State Diagram"
         Descr: Text;
         Id: Text;
         Position: Text;
-        Value: Text;
         Url: Text;
         Tip: Text;
         Done: Boolean;
@@ -1345,24 +1344,29 @@ codeunit 68914 "Mermaid State Diagram"
                 14, 44:
                     begin
                         First := IdStatement();
-                        if TT(Tk) = 4 then begin
-                            SetDescr(First, TrimColon(TX(Tk)));
-                            Tk += 1;
-                            AddToDoc(First);
-                        end else
-                            if TT(Tk) = 5 then begin
-                                Tk += 1;
-                                Second := IdStatement();
-                                S := NewStmt('relation');
-                                SRel1.Set(S, First);
-                                SRel2.Set(S, Second);
-                                if TT(Tk) = 4 then begin
-                                    SValue.Set(S, TrimColon(TX(Tk)));
+                        case TT(Tk) of
+                            4:
+                                begin
+                                    SetDescr(First, TrimColon(TX(Tk)));
                                     Tk += 1;
+                                    AddToDoc(First);
                                 end;
-                                AddToDoc(S);
-                            end else
+                            5:
+                                begin
+                                    Tk += 1;
+                                    Second := IdStatement();
+                                    S := NewStmt('relation');
+                                    SRel1.Set(S, First);
+                                    SRel2.Set(S, Second);
+                                    if TT(Tk) = 4 then begin
+                                        SValue.Set(S, TrimColon(TX(Tk)));
+                                        Tk += 1;
+                                    end;
+                                    AddToDoc(S);
+                                end;
+                            else
                                 AddToDoc(First);
+                        end;
                     end;
                 6:
                     begin
@@ -1782,14 +1786,12 @@ codeunit 68914 "Mermaid State Diagram"
                 'applyClass':
                     SetCssClass(MText.TrimWs(SId.Get(S)), SValue.Get(S));
                 'click':
-                    begin
-                        if LinkUrl.ContainsKey(SId.Get(S)) then begin
-                            LinkUrl.Set(SId.Get(S), SValue.Get(S));
-                            LinkTip.Set(SId.Get(S), STooltip.Get(S));
-                        end else begin
-                            LinkUrl.Add(SId.Get(S), SValue.Get(S));
-                            LinkTip.Add(SId.Get(S), STooltip.Get(S));
-                        end;
+                    if LinkUrl.ContainsKey(SId.Get(S)) then begin
+                        LinkUrl.Set(SId.Get(S), SValue.Get(S));
+                        LinkTip.Set(SId.Get(S), STooltip.Get(S));
+                    end else begin
+                        LinkUrl.Add(SId.Get(S), SValue.Get(S));
+                        LinkTip.Add(SId.Get(S), STooltip.Get(S));
                     end;
             end;
     end;
@@ -1999,6 +2001,7 @@ codeunit 68914 "Mermaid State Diagram"
         DefStyles: Text;
         G: Integer;
     begin
+        CompiledCnt := 0;
         // The two literal ids are what DOMPurify leaves of <<fork>> and <<choice>> in Mermaid; kept for parity.
         if (Id = '') or (Id = '</join></fork>') or (Id = '</choice>') then
             exit;
@@ -2332,6 +2335,7 @@ codeunit 68914 "Mermaid State Diagram"
         Span: Decimal;
         TitleH: Decimal;
     begin
+        Appeared := 0;
         for G := 1 to GId.Count() do
             if GShape.Get(G) <> 'noteGroup' then
                 if not ViewIndex.ContainsKey(GId.Get(G)) then
@@ -2542,6 +2546,7 @@ codeunit 68914 "Mermaid State Diagram"
         Par: Integer;
         Hops: Integer;
     begin
+        Hops := 0;
         if not CIsGrp.Get(Composite) then
             exit(false);
         Par := Logical.Get(Item);

@@ -65,9 +65,9 @@ codeunit 68917 "Mermaid Git Graph"
     // 18 TB, 19 BT, 20 :, 21 ACC_DESCR, 22 ACC_TITLE, 23 TITLE, 24 INT, 25 STRING, 26 NEWLINE,
     // 27 WHITESPACE, 28 YAML, 29 DIRECTIVE, 30 SINGLE_LINE_COMMENT, 31 REFERENCE.
 
-    local procedure KindName(Kind: Integer): Text
+    local procedure KindName(KindNo: Integer): Text
     begin
-        case Kind of
+        case KindNo of
             3:
                 exit('gitGraph');
             24:
@@ -78,14 +78,14 @@ codeunit 68917 "Mermaid Git Graph"
         exit('');
     end;
 
-    local procedure IsHidden(Kind: Integer): Boolean
+    local procedure IsHidden(KindNo: Integer): Boolean
     begin
-        exit(Kind in [27, 28, 29, 30]);
+        exit(KindNo in [27, 28, 29, 30]);
     end;
 
-    local procedure HasLonger(Kind: Integer): Boolean
+    local procedure HasLonger(KindNo: Integer): Boolean
     begin
-        exit(Kind in [0, 2, 3, 4, 5, 7, 8, 9, 11, 13, 17, 18, 19]);
+        exit(KindNo in [0, 2, 3, 4, 5, 7, 8, 9, 11, 13, 17, 18, 19]);
     end;
 
     // ---------------------------------------------------------------- lexing
@@ -96,7 +96,7 @@ codeunit 68917 "Mermaid Git Graph"
         N: Integer;
         K: Integer;
         E: Integer;
-        Kind: Integer;
+        KindNo: Integer;
         AltEnd: Integer;
         Matched: Boolean;
     begin
@@ -113,16 +113,16 @@ codeunit 68917 "Mermaid Git Graph"
             for K := 0 to 31 do begin
                 E := MatchAt(K, P);
                 if E > P then begin
-                    Kind := K;
+                    KindNo := K;
                     if HasLonger(K) then begin
                         AltEnd := MatchAt(31, P);
                         if AltEnd > E then begin
-                            Kind := 31;
+                            KindNo := 31;
                             E := AltEnd;
                         end;
                     end;
-                    if not IsHidden(Kind) then begin
-                        TokKinds.Add(Kind);
+                    if not IsHidden(KindNo) then begin
+                        TokKinds.Add(KindNo);
                         TokStarts.Add(P);
                         TokEnds.Add(E);
                     end;
@@ -139,9 +139,9 @@ codeunit 68917 "Mermaid Git Graph"
         TokEnds.Add(N + 1);
     end;
 
-    local procedure MatchAt(Kind: Integer; P: Integer): Integer
+    local procedure MatchAt(KindNo: Integer; P: Integer): Integer
     begin
-        case Kind of
+        case KindNo of
             0:
                 exit(Lit('cherry-pick', P));
             1:
@@ -1594,7 +1594,7 @@ codeunit 68917 "Mermaid Git Graph"
             if VHasLabel.Get(V) then
                 if Rotate then
                     LabelCross := 3 + Half() * (VLabelW.Get(V) + VLabelH.Get(V))
-                else begin
+                else
                     if Vertical then begin
                         LabelMain := VLabelH.Get(V);
                         LabelCross := 6 + VLabelW.Get(V);
@@ -1602,7 +1602,6 @@ codeunit 68917 "Mermaid Git Graph"
                         LabelMain := VLabelW.Get(V);
                         LabelCross := 6 + VLabelH.Get(V);
                     end;
-                end;
             VHalf.Add(MText.MaxDec(Dot(), MText.MaxDec(TagsMain / 2, LabelMain / 2)));
             VTagHalf.Add(TagsMain / 2);
             TagSide := Dot();
@@ -1635,7 +1634,7 @@ codeunit 68917 "Mermaid Git Graph"
                 end;
         end;
 
-        for V := 1 to N do begin
+        for V := 1 to N do
             if not Parallel then begin
                 if V = 1 then
                     VM.Set(V, 0)
@@ -1652,7 +1651,6 @@ codeunit 68917 "Mermaid Git Graph"
                 end;
                 VM.Set(V, M);
             end;
-        end;
         EndM := 0;
         for V := 1 to N do
             EndM := MText.MaxDec(EndM, VM.Get(V));

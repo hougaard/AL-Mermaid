@@ -10,10 +10,10 @@ codeunit 68909 "Mermaid Sequence Diagram"
     Access = Internal;
 
     var
-        MText: Codeunit "Mermaid Text";
-        Builder: Codeunit "Mermaid SVG Builder";
         TempActor: Record "Mermaid Seq Actor" temporary;
         TempMsg: Record "Mermaid Seq Message" temporary;
+        MText: Codeunit "Mermaid Text";
+        Builder: Codeunit "Mermaid SVG Builder";
         BoxNames: List of [Text];
         BoxFills: List of [Text];
         BoxWraps: List of [Boolean];
@@ -284,12 +284,11 @@ codeunit 68909 "Mermaid Sequence Diagram"
                 exit(-1);
             Dotted := F = 45;
             Top := C = 47;
-            if D = 124 then begin
+            if D = 124 then
                 if Top then
                     exit(TakeDotted(Dotted, 45))
                 else
                     exit(TakeDotted(Dotted, 46));
-            end;
             if Top then
                 exit(TakeDotted(Dotted, 47));
             exit(TakeDotted(Dotted, 48));
@@ -2045,7 +2044,7 @@ codeunit 68909 "Mermaid Sequence Diagram"
                             X1 := RightEdge(A, Starting);
                             Outer := MText.MaxDec(X0, X1) + 28 + Bw / 2;
                             Inner.Clear();
-                            if Bw > 0 then begin
+                            if Bw > 0 then
                                 if TailAtEnd then begin
                                     Inner.Append(Badge(TempMsg.Number, X1, BottomY, Bw));
                                     X1 += Bw / 2;
@@ -2053,7 +2052,6 @@ codeunit 68909 "Mermaid Sequence Diagram"
                                     Inner.Append(Badge(TempMsg.Number, X0, Top, Bw));
                                     X0 += Bw / 2;
                                 end;
-                            end;
                             // The loop leaves to the right and comes back heading left, which turns a half head over.
                             if AtStart then
                                 Heads += HeadSvg(Head, X0, Top, -1, Up);

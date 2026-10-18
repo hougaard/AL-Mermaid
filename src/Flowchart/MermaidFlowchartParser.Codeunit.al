@@ -11,10 +11,10 @@ codeunit 68905 "Mermaid Flowchart Parser"
     Access = Internal;
 
     var
-        MText: Codeunit "Mermaid Text";
-        Shapes: Codeunit "Mermaid Shapes";
         TempNode: Record "Mermaid Flow Node" temporary;
         TempEdge: Record "Mermaid Flow Edge" temporary;
+        MText: Codeunit "Mermaid Text";
+        Shapes: Codeunit "Mermaid Shapes";
         ClassStyles: Dictionary of [Text, Text];
         ClassTextStyles: Dictionary of [Text, Text];
         PairCount: Dictionary of [Text, Integer];
@@ -668,13 +668,12 @@ codeunit 68905 "Mermaid Flowchart Parser"
         I: Integer;
     begin
         Lines := Value.Split(MText.LF());
-        for I := 1 to Lines.Count() do begin
+        for I := 1 to Lines.Count() do
             if I > 1 then begin
                 Builder.Append(MText.LF());
                 Builder.Append(MText.TrimStartWs(Lines.Get(I)));
             end else
                 Builder.Append(Lines.Get(I));
-        end;
         exit(Builder.ToText());
     end;
 
@@ -1308,6 +1307,7 @@ codeunit 68905 "Mermaid Flowchart Parser"
         KeyName: Text;
         Value: Text;
     begin
+        Quote := 0;
         for I := 1 to StrLen(Data) do begin
             C := Data[I];
             if Quote <> 0 then begin
@@ -1522,6 +1522,7 @@ codeunit 68905 "Mermaid Flowchart Parser"
     var
         L: Integer;
     begin
+        L := 0;
         while MText.CharAt(Src, P + L) = Ch do
             L += 1;
         if L < 2 then
@@ -1551,6 +1552,7 @@ codeunit 68905 "Mermaid Flowchart Parser"
         Q: Integer;
         Dots: Integer;
     begin
+        Dots := 0;
         Q := P;
         if MText.CharAt(Src, Q) = 45 then
             Q += 1;
@@ -1571,6 +1573,7 @@ codeunit 68905 "Mermaid Flowchart Parser"
     var
         L: Integer;
     begin
+        L := 0;
         while MText.CharAt(Src, P + L) = 126 do
             L += 1;
         if L < 3 then

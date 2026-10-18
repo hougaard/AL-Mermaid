@@ -712,7 +712,7 @@ codeunit 68906 "Mermaid Layered Layout"
             K := Keys.Get(Item);
             J := I - 1;
             Moving := true;
-            while Moving do begin
+            while Moving do
                 if J < First then
                     Moving := false
                 else
@@ -721,7 +721,6 @@ codeunit 68906 "Mermaid Layered Layout"
                         J -= 1;
                     end else
                         Moving := false;
-            end;
             Order.Set(J + 1, Item);
         end;
         for I := First to LayerLast(R) do
@@ -777,7 +776,7 @@ codeunit 68906 "Mermaid Layered Layout"
             Item := Ids.Get(I);
             J := I - 1;
             Moving := true;
-            while Moving do begin
+            while Moving do
                 if J < 1 then
                     Moving := false
                 else
@@ -786,7 +785,6 @@ codeunit 68906 "Mermaid Layered Layout"
                         J -= 1;
                     end else
                         Moving := false;
-            end;
             Ids.Set(J + 1, Item);
         end;
     end;

@@ -8,12 +8,12 @@ codeunit 68907 "Mermaid Flowchart Renderer"
     Access = Internal;
 
     var
+        TempNode: Record "Mermaid Flow Node" temporary;
+        TempEdge: Record "Mermaid Flow Edge" temporary;
         MText: Codeunit "Mermaid Text";
         Builder: Codeunit "Mermaid SVG Builder";
         Shapes: Codeunit "Mermaid Shapes";
         Layout: Codeunit "Mermaid Compound Layout";
-        TempNode: Record "Mermaid Flow Node" temporary;
-        TempEdge: Record "Mermaid Flow Edge" temporary;
         // Nodes, by index in declaration order, which is also their index in the layout
         NodeEntry: List of [Integer];
         IndexOfId: Dictionary of [Text, Integer];
