@@ -1,0 +1,44 @@
+# Build output
+*.app
+*.app.zip
+.output/
+
+# Downloaded symbols and compiler caches
+.alpackages/
+.alcache/
+.altemplates/
+.altestrunner/
+.snapshots/
+.netpackages/
+.netcache/
+
+# AL Language extension state
+.vscode/rad.json
+.vscode/*.flf
+*.g.xlf
+
+# Environment-specific launch settings (server, credentials, tenant)
+.vscode/launch.json
+
+# Logs, reports and test results
+*.log
+TestResults/
+*.trx
+rad.json
+*.ruleset.json.bak
+
+# Secrets
+*.pfx
+*.p12
+*.snk
+.env
+.env.*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.idea/
+*.code-workspace.bak

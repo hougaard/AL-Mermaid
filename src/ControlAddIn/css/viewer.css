@@ -1,0 +1,108 @@
+html,
+body,
+#controlAddIn {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.mv-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  font-family: "Segoe UI", "Segoe WP", Segoe, device-segoe, Tahoma, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  color: #212121;
+  background: #ffffff;
+  border: 1px solid #e1e1e1;
+  border-radius: 4px;
+}
+
+.mv-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-bottom: 1px solid #e1e1e1;
+  background: #f8f8f8;
+  flex: 0 0 auto;
+}
+
+.mv-toolbar button {
+  font: inherit;
+  min-width: 32px;
+  padding: 2px 8px;
+  border: 1px solid #c8c8c8;
+  border-radius: 3px;
+  background: #ffffff;
+  color: inherit;
+  cursor: pointer;
+}
+
+.mv-toolbar button:hover {
+  background: #eef4f9;
+}
+
+.mv-zoom {
+  display: inline-block;
+  min-width: 40px;
+  text-align: center;
+}
+
+.mv-stage {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 12px;
+  text-align: center;
+}
+
+.mv-stage svg {
+  display: inline-block;
+}
+
+.mv-message:empty {
+  display: none;
+}
+
+.mv-message {
+  padding: 8px 12px;
+  white-space: pre-wrap;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.mv-error {
+  color: #a4262c;
+  background: #fde7e9;
+}
+
+.mv-placeholder {
+  color: #605e5c;
+  font-family: inherit;
+}
+
+/* The dark theme sets pele's variables on the container; the SVG reads them. */
+.mv-dark {
+  color: #e8e8e8;
+  background: #1f1f1f;
+  border-color: #3b3b3b;
+  --pele-bg: #1f1f1f;
+  --pele-fg: #e8e8e8;
+  --pele-muted: #a8a8a8;
+  --pele-line: #d0d0d0;
+  --pele-surface: #2d2d30;
+  --pele-surface-alt: #3a3a3d;
+  --pele-border: #7a7a7a;
+  --pele-accent: #7aa2f7;
+}
+
+.mv-dark .mv-toolbar {
+  background: #2a2a2a;
+  border-color: #3b3b3b;
+}
+
+.mv-dark .mv-toolbar button {
+  background: #333333;
+  border-color: #555555;
+}
