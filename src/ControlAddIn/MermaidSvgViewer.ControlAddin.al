@@ -8,8 +8,8 @@ controladdin "Mermaid SVG Viewer"
     Scripts = 'src/ControlAddIn/js/viewer.js';
     StartupScript = 'src/ControlAddIn/js/startup.js';
     StyleSheets = 'src/ControlAddIn/css/viewer.css';
-    RequestedHeight = 520;
-    MinimumHeight = 240;
+    RequestedHeight = 540;
+    MinimumHeight = 540;
     VerticalStretch = true;
     VerticalShrink = true;
     HorizontalStretch = true;

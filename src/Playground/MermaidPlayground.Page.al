@@ -19,13 +19,25 @@ page 68900 "Mermaid Playground"
             {
                 Caption = 'Mermaid';
 
+                field(SampleField; Sample)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Load sample';
+                    ToolTip = 'Specifies a sample diagram to load into the editor. Choosing one replaces the current text.';
+
+                    trigger OnValidate()
+                    begin
+                        if Sample <> Sample::None then
+                            SetSource(SampleText(Sample));
+                    end;
+                }
                 field(MermaidSourceField; MermaidSource)
                 {
                     ApplicationArea = All;
                     Caption = 'Mermaid source';
                     ShowCaption = false;
                     MultiLine = true;
-                    ToolTip = 'Specifies the Mermaid text to render. Type or paste a flowchart, sequence diagram or pie chart, then leave the field or choose Render.';
+                    ToolTip = 'Specifies the Mermaid text to render. Type or paste a flowchart, sequence, class, state, ER, gantt, pie, git graph, mindmap, journey or timeline diagram, then leave the field or choose Render.';
 
                     trigger OnValidate()
                     begin
@@ -132,62 +144,25 @@ page 68900 "Mermaid Playground"
 
                 trigger OnAction()
                 begin
+                    Sample := Sample::None;
                     SetSource('');
                 end;
             }
-            group(SamplesGroup)
+            action(NextSampleAction)
             {
-                Caption = 'Samples';
-                Image = Template;
+                ApplicationArea = All;
+                Caption = 'Next Sample';
+                Image = NextRecord;
+                ToolTip = 'Load the next sample diagram, to step through every supported diagram type.';
 
-                action(SampleFlowchartAction)
-                {
-                    ApplicationArea = All;
-                    Caption = 'Flowchart';
-                    Image = Workflow;
-                    ToolTip = 'Load a sample flowchart.';
-
-                    trigger OnAction()
-                    begin
-                        SetSource(SampleFlowchart());
-                    end;
-                }
-                action(SampleSubgraphAction)
-                {
-                    ApplicationArea = All;
-                    Caption = 'Flowchart with Subgraphs';
-                    Image = Hierarchy;
-                    ToolTip = 'Load a sample flowchart with subgraphs, shapes and styles.';
-
-                    trigger OnAction()
-                    begin
-                        SetSource(SampleSubgraphs());
-                    end;
-                }
-                action(SampleSequenceAction)
-                {
-                    ApplicationArea = All;
-                    Caption = 'Sequence Diagram';
-                    Image = Timeline;
-                    ToolTip = 'Load a sample sequence diagram.';
-
-                    trigger OnAction()
-                    begin
-                        SetSource(SampleSequence());
-                    end;
-                }
-                action(SamplePieAction)
-                {
-                    ApplicationArea = All;
-                    Caption = 'Pie Chart';
-                    Image = AnalysisView;
-                    ToolTip = 'Load a sample pie chart.';
-
-                    trigger OnAction()
-                    begin
-                        SetSource(SamplePie());
-                    end;
-                }
+                trigger OnAction()
+                begin
+                    if Sample.AsInteger() >= 12 then
+                        Sample := Enum::"Mermaid Sample".FromInteger(1)
+                    else
+                        Sample := Enum::"Mermaid Sample".FromInteger(Sample.AsInteger() + 1);
+                    SetSource(SampleText(Sample));
+                end;
             }
         }
         area(Promoted)
@@ -206,42 +181,33 @@ page 68900 "Mermaid Playground"
                 {
                 }
             }
-            group(Category_Samples)
+            actionref(NextSamplePromoted; NextSampleAction)
             {
-                Caption = 'Samples';
-
-                actionref(SampleFlowchartPromoted; SampleFlowchartAction)
-                {
-                }
-                actionref(SampleSubgraphPromoted; SampleSubgraphAction)
-                {
-                }
-                actionref(SampleSequencePromoted; SampleSequenceAction)
-                {
-                }
-                actionref(SamplePiePromoted; SamplePieAction)
-                {
-                }
             }
         }
     }
 
     trigger OnOpenPage()
     begin
-        if MermaidSource = '' then
-            MermaidSource := SampleFlowchart();
+        if MermaidSource = '' then begin
+            Sample := Sample::Flowchart;
+            MermaidSource := SampleText(Sample);
+        end;
     end;
 
     var
         MermaidSvg: Codeunit "Mermaid SVG";
+        Sample: Enum "Mermaid Sample";
         MermaidSource: Text;
         SvgText: Text;
         DiagramType: Text;
         StatusText: Text;
         StatusStyle: Text;
+        CallStackText: Text;
         ViewerReady: Boolean;
         ShowSvgSource: Boolean;
         EmptyMsg: Label 'Type or paste Mermaid text above.';
+        CallStackLbl: Label 'AL call stack:';
         RenderedMsg: Label 'Rendered %1 characters of SVG.', Comment = '%1 = the length of the SVG';
         NothingToDownloadErr: Label 'There is no SVG to download. Render a diagram first.';
         DownloadTitleTxt: Label 'Download SVG';
@@ -261,6 +227,7 @@ page 68900 "Mermaid Playground"
         StartTime: DateTime;
     begin
         DiagramType := MermaidSvg.DetectType(MermaidSource);
+        CallStackText := '';
         if DelChr(MermaidSource, '=', ' ') = '' then begin
             SvgText := '';
             StatusText := EmptyMsg;
@@ -276,10 +243,13 @@ page 68900 "Mermaid Playground"
             if ViewerReady then
                 CurrPage.Viewer.ShowSvg(SvgText);
         end else begin
+            CallStackText := MermaidSvg.GetLastCallStack();
             StatusText := ErrorMessage;
+            if CallStackText <> '' then
+                StatusText := ErrorMessage + LineBreak() + LineBreak() + CallStackLbl + LineBreak() + CallStackText;
             StatusStyle := 'Unfavorable';
             if ViewerReady then
-                CurrPage.Viewer.ShowError(ErrorMessage);
+                CurrPage.Viewer.ShowError(StatusText);
         end;
     end;
 
@@ -301,6 +271,14 @@ page 68900 "Mermaid Playground"
         DownloadFromStream(InStr, DownloadTitleTxt, '', FileFilterTxt, FileName);
     end;
 
+    local procedure LineBreak(): Text
+    var
+        Lf: Text[1];
+    begin
+        Lf[1] := 10;
+        exit(Lf);
+    end;
+
     local procedure Lines(Parts: List of [Text]): Text
     var
         Builder: TextBuilder;
@@ -313,6 +291,37 @@ page 68900 "Mermaid Playground"
             Builder.Append(Lf);
         end;
         exit(Builder.ToText());
+    end;
+
+    local procedure SampleText(Which: Enum "Mermaid Sample"): Text
+    begin
+        case Which of
+            Which::Flowchart:
+                exit(SampleFlowchart());
+            Which::FlowchartSubgraphs:
+                exit(SampleSubgraphs());
+            Which::Sequence:
+                exit(SampleSequence());
+            Which::ClassDiagram:
+                exit(SampleClass());
+            Which::StateDiagram:
+                exit(SampleState());
+            Which::ERDiagram:
+                exit(SampleER());
+            Which::Gantt:
+                exit(SampleGantt());
+            Which::Pie:
+                exit(SamplePie());
+            Which::GitGraph:
+                exit(SampleGitGraph());
+            Which::Mindmap:
+                exit(SampleMindmap());
+            Which::Journey:
+                exit(SampleJourney());
+            Which::Timeline:
+                exit(SampleTimeline());
+        end;
+        exit('');
     end;
 
     local procedure SampleFlowchart(): Text
@@ -387,6 +396,226 @@ page 68900 "Mermaid Playground"
         Parts.Add('    "South" : 27');
         Parts.Add('    "East" : 18');
         Parts.Add('    "West" : 12.5');
+        exit(Lines(Parts));
+    end;
+
+    local procedure SampleClass(): Text
+    var
+        Parts: List of [Text];
+    begin
+        Parts.Add('classDiagram');
+        Parts.Add('    direction LR');
+        Parts.Add('    class Customer {');
+        Parts.Add('        +Code No');
+        Parts.Add('        +Text Name');
+        Parts.Add('        +Decimal BalanceLCY');
+        Parts.Add('        +CheckCreditLimit() Boolean');
+        Parts.Add('    }');
+        Parts.Add('    class SalesHeader {');
+        Parts.Add('        <<Table>>');
+        Parts.Add('        +Code DocumentNo');
+        Parts.Add('        +Date PostingDate');
+        Parts.Add('        +Post()');
+        Parts.Add('    }');
+        Parts.Add('    class SalesLine {');
+        Parts.Add('        +Integer LineNo');
+        Parts.Add('        +Decimal Quantity');
+        Parts.Add('        +Decimal Amount');
+        Parts.Add('    }');
+        Parts.Add('    class Posting~T~ {');
+        Parts.Add('        <<interface>>');
+        Parts.Add('        +Run(T record)$');
+        Parts.Add('    }');
+        Parts.Add('    Customer "1" --> "*" SalesHeader : places');
+        Parts.Add('    SalesHeader *-- "1..*" SalesLine : contains');
+        Parts.Add('    Posting <|.. SalesHeader');
+        Parts.Add('    note for Customer "Master data"');
+        exit(Lines(Parts));
+    end;
+
+    local procedure SampleState(): Text
+    var
+        Parts: List of [Text];
+    begin
+        Parts.Add('stateDiagram-v2');
+        Parts.Add('    accTitle: Order lifecycle');
+        Parts.Add('    [*] --> Draft');
+        Parts.Add('    Draft --> Review : submit');
+        Parts.Add('    state Review {');
+        Parts.Add('        [*] --> Checking');
+        Parts.Add('        Checking --> Approved : ok');
+        Parts.Add('        Checking --> Rejected : issues');
+        Parts.Add('        --');
+        Parts.Add('        [*] --> Pricing');
+        Parts.Add('        Pricing --> Priced');
+        Parts.Add('    }');
+        Parts.Add('    state decision <<choice>>');
+        Parts.Add('    Review --> decision');
+        Parts.Add('    decision --> Shipped : approved');
+        Parts.Add('    decision --> Draft : rework');
+        Parts.Add('    Shipped --> [*]');
+        Parts.Add('    note right of Draft');
+        Parts.Add('        Drafts can be edited');
+        Parts.Add('        until they are submitted');
+        Parts.Add('    end note');
+        Parts.Add('    note left of Shipped : Tracked by carrier');
+        Parts.Add('    classDef done fill:#d4f7d4,stroke:#2e7d32');
+        Parts.Add('    class Shipped done');
+        exit(Lines(Parts));
+    end;
+
+    local procedure SampleER(): Text
+    var
+        Parts: List of [Text];
+    begin
+        Parts.Add('erDiagram');
+        Parts.Add('    CUSTOMER ||--o{ ORDER : places');
+        Parts.Add('    ORDER ||--|{ LINE-ITEM : contains');
+        Parts.Add('    PRODUCT ||--o{ LINE-ITEM : "ordered in"');
+        Parts.Add('    CUSTOMER }|..|{ DELIVERY-ADDRESS : uses');
+        Parts.Add('    CUSTOMER {');
+        Parts.Add('        string id PK "Customer No."');
+        Parts.Add('        string name');
+        Parts.Add('        string email UK');
+        Parts.Add('    }');
+        Parts.Add('    ORDER {');
+        Parts.Add('        int orderNumber PK');
+        Parts.Add('        string customerId FK');
+        Parts.Add('        date orderDate');
+        Parts.Add('        decimal total "incl. VAT"');
+        Parts.Add('    }');
+        Parts.Add('    LINE-ITEM {');
+        Parts.Add('        int orderNumber PK, FK');
+        Parts.Add('        int lineNo PK');
+        Parts.Add('        string productCode FK');
+        Parts.Add('        int quantity');
+        Parts.Add('        decimal unitPrice');
+        Parts.Add('    }');
+        Parts.Add('    PRODUCT {');
+        Parts.Add('        string code PK');
+        Parts.Add('        string description');
+        Parts.Add('        List~string~ tags');
+        Parts.Add('    }');
+        Parts.Add('    DELIVERY-ADDRESS["Delivery address"] {');
+        Parts.Add('        string street');
+        Parts.Add('        string city');
+        Parts.Add('    }');
+        Parts.Add('    classDef master fill:#e8f0fe,stroke:#5b7bd5');
+        Parts.Add('    class CUSTOMER,PRODUCT master');
+        exit(Lines(Parts));
+    end;
+
+    local procedure SampleGantt(): Text
+    var
+        Parts: List of [Text];
+    begin
+        Parts.Add('gantt');
+        Parts.Add('    title Release plan');
+        Parts.Add('    dateFormat YYYY-MM-DD');
+        Parts.Add('    axisFormat %d %b');
+        Parts.Add('    excludes weekends');
+        Parts.Add('    section Design');
+        Parts.Add('        Requirements      :done, req, 2026-01-05, 5d');
+        Parts.Add('        Architecture      :active, arch, after req, 4d');
+        Parts.Add('    section Build');
+        Parts.Add('        Backend           :crit, be, after arch, 10d');
+        Parts.Add('        Frontend          :fe, after arch, 8d');
+        Parts.Add('        Testing           :test, after be, 5d');
+        Parts.Add('    section Release');
+        Parts.Add('        Go-live           :milestone, golive, after test, 0d');
+        exit(Lines(Parts));
+    end;
+
+    local procedure SampleGitGraph(): Text
+    var
+        Parts: List of [Text];
+    begin
+        Parts.Add('---');
+        Parts.Add('title: Release flow');
+        Parts.Add('---');
+        Parts.Add('gitGraph');
+        Parts.Add('    commit id: "init"');
+        Parts.Add('    commit tag: "v0.1"');
+        Parts.Add('    branch develop');
+        Parts.Add('    checkout develop');
+        Parts.Add('    commit');
+        Parts.Add('    branch feature/login order: 3');
+        Parts.Add('    checkout feature/login');
+        Parts.Add('    commit msg: "login form"');
+        Parts.Add('    commit type: HIGHLIGHT');
+        Parts.Add('    checkout develop');
+        Parts.Add('    merge feature/login');
+        Parts.Add('    commit type: REVERSE');
+        Parts.Add('    checkout main');
+        Parts.Add('    merge develop id: "release" tag: "v1.0"');
+        Parts.Add('    branch hotfix');
+        Parts.Add('    commit id: "fix"');
+        Parts.Add('    checkout develop');
+        Parts.Add('    cherry-pick id: "fix"');
+        Parts.Add('    checkout main');
+        Parts.Add('    merge hotfix tag: "v1.0.1"');
+        exit(Lines(Parts));
+    end;
+
+    local procedure SampleMindmap(): Text
+    var
+        Parts: List of [Text];
+    begin
+        Parts.Add('mindmap');
+        Parts.Add('  root((Mind maps))');
+        Parts.Add('    Origins');
+        Parts.Add('      Long history');
+        Parts.Add('      Popularisation');
+        Parts.Add('        British popular psychology author Tony Buzan');
+        Parts.Add('    Research');
+        Parts.Add('      On effectiveness<br/>and features');
+        Parts.Add('      On automatic creation');
+        Parts.Add('        Uses');
+        Parts.Add('            Creative techniques');
+        Parts.Add('            Strategic planning');
+        Parts.Add('            Argument mapping');
+        Parts.Add('    Tools');
+        Parts.Add('      Pen and paper');
+        Parts.Add('      Mermaid');
+        Parts.Add('      [Square]');
+        Parts.Add('      (Rounded)');
+        Parts.Add('      {{Hexagon}}');
+        Parts.Add('      ))Bang((');
+        Parts.Add('      )Cloud(');
+        Parts.Add('      md["`**Markdown** and *emphasis*`"]');
+        exit(Lines(Parts));
+    end;
+
+    local procedure SampleJourney(): Text
+    var
+        Parts: List of [Text];
+    begin
+        Parts.Add('journey');
+        Parts.Add('    title My working day');
+        Parts.Add('    accTitle: A working day');
+        Parts.Add('    section Go to work');
+        Parts.Add('      Make tea: 5: Me');
+        Parts.Add('      Go upstairs: 3: Me');
+        Parts.Add('      Do work: 1: Me, Cat');
+        Parts.Add('    section Go home');
+        Parts.Add('      Go downstairs: 5: Me');
+        Parts.Add('      Sit down: 4: Me, Cat');
+        exit(Lines(Parts));
+    end;
+
+    local procedure SampleTimeline(): Text
+    var
+        Parts: List of [Text];
+    begin
+        Parts.Add('timeline');
+        Parts.Add('    title History of Social Media Platforms');
+        Parts.Add('    section Early days');
+        Parts.Add('      2002 : LinkedIn');
+        Parts.Add('      2004 : Facebook : Google');
+        Parts.Add('    section Video and more');
+        Parts.Add('      2005 : YouTube');
+        Parts.Add('      2006 : Twitter');
+        Parts.Add('           : Spotify');
         exit(Lines(Parts));
     end;
 }

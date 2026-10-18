@@ -439,7 +439,7 @@ codeunit 68901 "Mermaid Preprocessor"
         if Value = '' then
             exit(false);
         for I := 1 to StrLen(Value) do
-            if not MText.IsDigit(Value[I]) then
+            if not MText.IsDigit(MText.CharAt(Value, I)) then
                 exit(false);
         exit(true);
     end;

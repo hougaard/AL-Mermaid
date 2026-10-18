@@ -2091,7 +2091,7 @@ codeunit 68905 "Mermaid Flowchart Parser"
         if Colon > 0 then begin
             Scheme := '';
             for I := 1 to Colon - 1 do
-                if MText.IsWord(Decoded[I]) then
+                if MText.IsWord(MText.CharAt(Decoded, I)) then
                     Scheme += LowerCase(CopyStr(Decoded, I, 1));
             if Scheme in ['javascript', 'data', 'vbscript'] then
                 exit('about:blank');

@@ -851,7 +851,7 @@ codeunit 68909 "Mermaid Sequence Diagram"
             if not (StrLen(Lower) in [4, 5, 7, 9]) then
                 exit(false);
             for I := 2 to StrLen(Lower) do
-                if not MText.IsHex(Lower[I]) then
+                if not MText.IsHex(MText.CharAt(Lower, I)) then
                     exit(false);
             exit(true);
         end;
